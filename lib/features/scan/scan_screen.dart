@@ -109,15 +109,15 @@ class _ScanScreenState extends State<ScanScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Захват в сейф',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    'Охота на номер',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: VaultColors.gold,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w800,
                         ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Сфотографируйте госномер или выберите фото. После OCR можно поправить текст — серии и редкость посчитаются сразу.',
+                    'Сфотографируй госномер — OCR подставит текст, сейф сразу покажет серию, редкость и цену. Редкие и легендарные дают праздник при сохранении.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: VaultColors.mist,
                           height: 1.35,

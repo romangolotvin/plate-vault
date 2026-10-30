@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 import '../../app_state.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/plate_badge.dart';
+import '../../core/widgets/vault_motion.dart';
 import '../../core/widgets/vault_scaffold.dart';
 import '../../data/models/collection_item.dart';
+import '../../data/models/rarity.dart';
 import '../../data/plates/plate_registry.dart';
 import '../../data/rarity/rarity_engine.dart';
 import '../../data/valuation/plate_valuation_engine.dart';
@@ -80,6 +82,8 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
       state.currency,
     );
     final editing = widget.existing != null;
+    final shine =
+        preview.rarity.index >= Rarity.rare.index && _textCtrl.text.isNotEmpty;
 
     return VaultScaffold(
       appBar: AppBar(
@@ -88,44 +92,81 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
-          Container(
-            padding: const EdgeInsets.fromLTRB(14, 16, 14, 18),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  VaultColors.slate.withValues(alpha: 0.95),
-                  VaultColors.charcoal.withValues(alpha: 0.9),
+          RarityPulse(
+            rarity: preview.rarity,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(14, 16, 14, 18),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    VaultColors.slate.withValues(alpha: 0.98),
+                    VaultColors.charcoal.withValues(alpha: 0.95),
+                    preview.rarity.index >= Rarity.epic.index
+                        ? VaultColors.legendary.withValues(alpha: 0.12)
+                        : VaultColors.gold.withValues(alpha: 0.05),
+                  ],
+                ),
+                border: Border.all(
+                  color: VaultColors.gold.withValues(alpha: 0.28),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: VaultColors.gold.withValues(alpha: 0.12),
+                    blurRadius: 28,
+                    offset: const Offset(0, 12),
+                  ),
                 ],
               ),
-              border: Border.all(
-                color: VaultColors.gold.withValues(alpha: 0.22),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: VaultColors.gold.withValues(alpha: 0.08),
-                  blurRadius: 24,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                Text(
-                  'ГОСНОМЕР',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: VaultColors.gold.withValues(alpha: 0.85),
-                        letterSpacing: 2.2,
+              child: Column(
+                children: [
+                  Text(
+                    'ТРОФЕЙ СЕЙФА',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: VaultColors.gold.withValues(alpha: 0.9),
+                          letterSpacing: 2.4,
+                        ),
+                  ),
+                  const SizedBox(height: 12),
+                  PlateShine(
+                    enabled: shine,
+                    child: PlateBadge(
+                      text: _textCtrl.text.isEmpty
+                          ? 'А000АА00'
+                          : _textCtrl.text,
+                      countryCode: _country,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ValueCountUp(
+                    key: ValueKey(
+                      '${valuation.amountRub.round()}_${state.currency.code}',
+                    ),
+                    valuation: valuation,
+                    currency: state.currency,
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          color: VaultColors.gold,
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      RarityChip(rarity: preview.rarity),
+                      const SizedBox(width: 10),
+                      Text(
+                        'score ${preview.score}',
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                              color: VaultColors.mist.withValues(alpha: 0.85),
+                            ),
                       ),
-                ),
-                const SizedBox(height: 12),
-                PlateBadge(
-                  text: _textCtrl.text.isEmpty ? 'А000АА00' : _textCtrl.text,
-                  countryCode: _country,
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 18),
@@ -160,60 +201,13 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
               labelText: 'Заметка (необязательно)',
             ),
           ),
-          const SizedBox(height: 18),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              gradient: LinearGradient(
-                colors: [
-                  VaultColors.panel,
-                  VaultColors.slate.withValues(alpha: 0.85),
-                ],
-              ),
-              border: Border.all(
-                color: VaultColors.gold.withValues(alpha: 0.2),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    RarityChip(rarity: preview.rarity),
-                    const Spacer(),
-                    Text(
-                      valueLabel,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: VaultColors.gold,
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'score ${preview.score} · оценка коллекционера',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: VaultColors.mist.withValues(alpha: 0.85),
-                      ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  preview.reason,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: VaultColors.mist,
-                        height: 1.35,
-                      ),
-                ),
-                if (preview.meanings.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  MeaningChips(meanings: preview.meanings),
-                ],
-              ],
-            ),
-          ),
           const SizedBox(height: 16),
+          ValuationBreakdownCard(valuation: valuation),
+          const SizedBox(height: 16),
+          if (preview.meanings.isNotEmpty) ...[
+            MeaningChips(meanings: preview.meanings),
+            const SizedBox(height: 12),
+          ],
           MeaningDetailCard(meanings: preview.meanings),
           if (widget.photoPath != null) ...[
             const SizedBox(height: 8),
@@ -226,7 +220,7 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
           ],
           const SizedBox(height: 24),
           FilledButton(
-            onPressed: _saving ? null : _save,
+            onPressed: _saving ? null : () => _save(preview.rarity, valueLabel),
             child: Text(editing ? 'Сохранить' : 'Добавить в коллекцию'),
           ),
         ],
@@ -234,7 +228,7 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
     );
   }
 
-  Future<void> _save() async {
+  Future<void> _save(Rarity rarity, String valueLabel) async {
     final text = _textCtrl.text.trim();
     if (text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -244,6 +238,7 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
     }
     setState(() => _saving = true);
     final state = context.read<AppState>();
+    final isNew = widget.existing == null;
     try {
       if (widget.existing != null) {
         await state.updatePlate(
@@ -264,6 +259,15 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
           notes: _notesCtrl.text.trim().isEmpty
               ? null
               : _notesCtrl.text.trim(),
+        );
+      }
+      if (!mounted) return;
+      if (isNew && rarity.index >= Rarity.rare.index) {
+        await showRareCaptureCelebration(
+          context,
+          rarity: rarity,
+          valueLabel: valueLabel,
+          plateText: text,
         );
       }
       if (mounted) Navigator.of(context).pop();

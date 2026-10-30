@@ -63,19 +63,48 @@ class _AuthScreenState extends State<AuthScreen>
               'PLATE VAULT',
               style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                     color: VaultColors.gold,
-                    letterSpacing: 2.2,
+                    letterSpacing: 2.6,
+                    fontWeight: FontWeight.w700,
+                    shadows: [
+                      Shadow(
+                        color: VaultColors.gold.withValues(alpha: 0.35),
+                        blurRadius: 18,
+                      ),
+                    ],
                   ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Сейф госномеров. Сканируй, читай серии, собирай редкость.',
+              'Охоться за сериями. МЕР, ВОР, столицы — сейф считает редкость и цену.',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: VaultColors.mist,
                     height: 1.35,
                   ),
             ),
             const SizedBox(height: 22),
-            const PlateBadge(text: 'А777МР77', countryCode: 'RU'),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: VaultColors.gold.withValues(alpha: 0.3),
+                ),
+                gradient: LinearGradient(
+                  colors: [
+                    VaultColors.panel.withValues(alpha: 0.9),
+                    VaultColors.legendary.withValues(alpha: 0.1),
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: VaultColors.gold.withValues(alpha: 0.16),
+                    blurRadius: 24,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: const PlateBadge(text: 'МЕР777178', countryCode: 'RU'),
+            ),
             const SizedBox(height: 28),
             if (!state.cloudEnabled)
               Card(

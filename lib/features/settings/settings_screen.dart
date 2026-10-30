@@ -44,40 +44,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final checked = result;
     if (checked == null) return;
 
+    if (checked.upToDate) {
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Обновлений нет'),
+          content: Text(checked.message ?? 'У вас актуальная версия.'),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Ок'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     await showDialog<void>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(
-            checked.upToDate ? 'Обновлений нет' : 'Есть обновление',
-          ),
-          content: Text(
-            [
-              checked.message ?? '',
-              if (checked.latestVersion != null)
-                'Новая версия: ${checked.latestVersion}',
-              if (!checked.upToDate && Platform.isIOS)
-                'На iOS обновление через App Store (ссылка-заглушка).',
-              if (!checked.upToDate && Platform.isAndroid)
-                'Android: можно открыть GitHub Release / APK.',
-            ].where((e) => e.trim().isNotEmpty).join('\n\n'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Закрыть'),
-            ),
-            if (!checked.upToDate)
-              FilledButton(
-                onPressed: () async {
-                  await state.updateService.openUpdate(checked);
-                  if (context.mounted) Navigator.pop(context);
-                },
-                child: const Text('Обновить'),
-              ),
-          ],
-        );
-      },
+      barrierDismissible: false,
+      builder: (context) => _UpdateDialog(
+        result: checked,
+        updateService: state.updateService,
+      ),
     );
   }
 
@@ -95,7 +85,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           if (profile != null)
-            Card(
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                gradient: LinearGradient(
+                  colors: [
+                    VaultColors.panel,
+                    VaultColors.teal.withValues(alpha: 0.12),
+                  ],
+                ),
+                border: Border.all(
+                  color: VaultColors.gold.withValues(alpha: 0.25),
+                ),
+              ),
               child: ListTile(
                 leading: CircleAvatar(
                   backgroundColor: VaultColors.slate,
@@ -104,17 +107,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     color: VaultColors.gold.withValues(alpha: 0.95),
                   ),
                 ),
-                title: Text(profile.displayName),
+                title: Text(
+                  profile.displayName,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
                 subtitle: Text(
                   profile.isLocalOnly
-                      ? 'Локальный аккаунт'
+                      ? 'Локальный сейф'
                       : (profile.email ?? profile.uid),
                   style: const TextStyle(color: VaultColors.mist),
                 ),
               ),
             ),
-          const SizedBox(height: 12),
-          Card(
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              color: VaultColors.panel.withValues(alpha: 0.92),
+              border: Border.all(
+                color: VaultColors.gold.withValues(alpha: 0.2),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: VaultColors.gold.withValues(alpha: 0.08),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
             child: Column(
               children: [
                 SwitchListTile(
@@ -126,7 +145,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             profile.copyWith(publicCollectionEnabled: v),
                           ),
                 ),
-                const Divider(height: 1),
+                Divider(height: 1, color: VaultColors.gold.withValues(alpha: 0.12)),
                 ListTile(
                   leading: const Icon(
                     Icons.payments_outlined,
@@ -155,7 +174,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     },
                   ),
                 ),
-                const Divider(height: 1),
+                Divider(height: 1, color: VaultColors.gold.withValues(alpha: 0.12)),
                 ListTile(
                   leading: Icon(
                     Icons.cloud_outlined,
@@ -171,7 +190,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     style: const TextStyle(color: VaultColors.mist),
                   ),
                 ),
-                const Divider(height: 1),
+                Divider(height: 1, color: VaultColors.gold.withValues(alpha: 0.12)),
                 ListTile(
                   leading: const Icon(Icons.info_outline, color: VaultColors.gold),
                   title: const Text('Версия'),
@@ -180,7 +199,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     style: const TextStyle(color: VaultColors.mist),
                   ),
                 ),
-                const Divider(height: 1),
+                Divider(height: 1, color: VaultColors.gold.withValues(alpha: 0.12)),
                 ListTile(
                   leading: _checking
                       ? const SizedBox(
@@ -193,9 +212,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           color: VaultColors.teal,
                         ),
                   title: const Text('Проверить обновления'),
-                  subtitle: const Text(
-                    'Сейчас через GitHub Releases; позже — Play / App Store',
-                    style: TextStyle(color: VaultColors.mist),
+                  subtitle: Text(
+                    Platform.isIOS
+                        ? 'iOS: App Store (заглушка)'
+                        : 'Android: скачивание APK внутри приложения, без браузера',
+                    style: const TextStyle(color: VaultColors.mist),
                   ),
                   onTap: _checking ? null : _checkUpdates,
                 ),
@@ -203,7 +224,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          Card(
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              color: VaultColors.panel.withValues(alpha: 0.9),
+              border: Border.all(
+                color: const Color(0xFFE57373).withValues(alpha: 0.35),
+              ),
+            ),
             child: ListTile(
               leading: const Icon(Icons.logout, color: Color(0xFFE57373)),
               title: const Text('Выйти'),
@@ -212,6 +240,171 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _UpdateDialog extends StatefulWidget {
+  const _UpdateDialog({
+    required this.result,
+    required this.updateService,
+  });
+
+  final UpdateCheckResult result;
+  final UpdateService updateService;
+
+  @override
+  State<_UpdateDialog> createState() => _UpdateDialogState();
+}
+
+class _UpdateDialogState extends State<_UpdateDialog> {
+  bool _busy = false;
+  double? _progress;
+  String? _error;
+  String _status = '';
+
+  Future<void> _confirm() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+      _progress = Platform.isAndroid ? 0 : null;
+      _status = Platform.isAndroid ? 'Скачиваем APK…' : 'Открываем Store…';
+    });
+    try {
+      if (Platform.isIOS) {
+        await widget.updateService.openUpdate(widget.result);
+        if (mounted) Navigator.pop(context);
+        return;
+      }
+
+      await widget.updateService.downloadAndInstall(
+        widget.result,
+        onProgress: (p) {
+          if (!mounted) return;
+          setState(() {
+            _progress = p.total > 0 ? p.fraction : null;
+            if (p.total > 0) {
+              final mb = (p.received / (1024 * 1024)).toStringAsFixed(1);
+              final totalMb = (p.total / (1024 * 1024)).toStringAsFixed(1);
+              _status = 'Скачивание $mb / $totalMb МБ';
+            } else {
+              _status = 'Скачивание… ${(p.received / (1024 * 1024)).toStringAsFixed(1)} МБ';
+            }
+          });
+        },
+      );
+      if (!mounted) return;
+      setState(() {
+        _status = 'Запуск установщика…';
+        _progress = 1;
+      });
+      // Installer UI takes over; close dialog shortly after.
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = e.toString().replaceFirst('Bad state: ', '');
+        _status = '';
+        _progress = null;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final notes = (widget.result.releaseNotes ?? '').trim();
+    final clipped = notes.length > 420 ? '${notes.substring(0, 420)}…' : notes;
+
+    return AlertDialog(
+      title: const Text('Обновить?'),
+      content: SizedBox(
+        width: 360,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Доступна ${widget.result.latestVersion} '
+              '(сейчас ${widget.result.currentVersion})',
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: VaultColors.gold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              Platform.isAndroid
+                  ? 'APK скачается внутри приложения и откроется установщик Android. Браузер не нужен.'
+                  : 'На iOS обновление через App Store (sideload недоступен).',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: VaultColors.mist,
+                    height: 1.35,
+                  ),
+            ),
+            if (clipped.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Что нового',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: VaultColors.teal,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 140),
+                child: SingleChildScrollView(
+                  child: Text(
+                    clipped,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: VaultColors.mist,
+                          height: 1.35,
+                        ),
+                  ),
+                ),
+              ),
+            ],
+            if (_busy) ...[
+              const SizedBox(height: 16),
+              if (_progress != null)
+                LinearProgressIndicator(
+                  value: _progress,
+                  minHeight: 8,
+                  borderRadius: BorderRadius.circular(8),
+                )
+              else
+                const LinearProgressIndicator(minHeight: 8),
+              const SizedBox(height: 8),
+              Text(
+                _status,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: VaultColors.cream,
+                    ),
+              ),
+            ],
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                _error!,
+                style: const TextStyle(color: Color(0xFFE57373), height: 1.35),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.pop(context),
+          child: const Text('Позже'),
+        ),
+        FilledButton(
+          onPressed: _busy ? null : _confirm,
+          child: Text(
+            Platform.isAndroid ? 'Да, обновить' : 'Открыть Store',
+          ),
+        ),
+      ],
     );
   }
 }

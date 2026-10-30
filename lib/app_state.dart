@@ -13,7 +13,10 @@ import 'data/repositories/auth_repository.dart';
 import 'data/repositories/collection_repository.dart';
 import 'data/repositories/local_store.dart';
 import 'data/valuation/currency.dart';
+import 'data/valuation/plate_valuation_engine.dart';
 import 'firebase_options.dart';
+
+enum CollectionSort { newest, valueDesc, rarityDesc }
 
 class AppState extends ChangeNotifier {
   AppState({UpdateService? updateService})
@@ -35,17 +38,56 @@ class AppState extends ChangeNotifier {
   String countryFilter = '';
   Rarity? rarityFilter;
   String searchQuery = '';
+  CollectionSort sort = CollectionSort.newest;
 
   List<CollectionItem> publicFeed = [];
   List<UserProfile> publicProfiles = [];
 
   UserProfile? get profile => authRepository.currentProfile;
   bool get isSignedIn => profile != null;
-  List<CollectionItem> get myItems => collectionRepository.filtered(
-        country: countryFilter,
-        rarity: rarityFilter,
-        query: searchQuery,
-      );
+  List<CollectionItem> get myItems {
+    final items = collectionRepository.filtered(
+      country: countryFilter,
+      rarity: rarityFilter,
+      query: searchQuery,
+    );
+    return _sorted(items);
+  }
+
+  List<CollectionItem> _sorted(List<CollectionItem> items) {
+    final copy = List<CollectionItem>.from(items);
+    switch (sort) {
+      case CollectionSort.newest:
+        copy.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      case CollectionSort.valueDesc:
+        copy.sort((a, b) {
+          final va = PlateValuationEngine.instance
+              .estimate(countryCode: a.countryCode, rawText: a.rawText)
+              .amountRub;
+          final vb = PlateValuationEngine.instance
+              .estimate(countryCode: b.countryCode, rawText: b.rawText)
+              .amountRub;
+          final c = vb.compareTo(va);
+          return c != 0 ? c : b.createdAt.compareTo(a.createdAt);
+        });
+      case CollectionSort.rarityDesc:
+        copy.sort((a, b) {
+          final c = b.rarity.index.compareTo(a.rarity.index);
+          return c != 0 ? c : b.createdAt.compareTo(a.createdAt);
+        });
+    }
+    return copy;
+  }
+
+  double get collectionWorthRub {
+    var sum = 0.0;
+    for (final item in collectionRepository.items) {
+      sum += PlateValuationEngine.instance
+          .estimate(countryCode: item.countryCode, rawText: item.rawText)
+          .amountRub;
+    }
+    return sum;
+  }
 
   Future<void> init() async {
     try {
@@ -192,6 +234,7 @@ class AppState extends ChangeNotifier {
     String? country,
     Rarity? rarity,
     String? query,
+    CollectionSort? sortBy,
     bool clearRarity = false,
   }) {
     if (country != null) countryFilter = country;
@@ -201,6 +244,7 @@ class AppState extends ChangeNotifier {
       rarityFilter = rarity;
     }
     if (query != null) searchQuery = query;
+    if (sortBy != null) sort = sortBy;
     notifyListeners();
   }
 

@@ -167,6 +167,50 @@ void main() {
     expect(AppCurrency.fromCode(null), AppCurrency.rub);
   });
 
+  // Folklore RUB ranges (hobby estimate, not market quote):
+  // - Mirror letters/digits on Caucasian / provincial region: ~50–150k
+  // - МЕР + 777 + MSK/SPB (МЕР777178): Tier 5 top combo ~800k–several million
+  // User complaint: ~70k for МЕР+777+capital was wrong — that bucket is mirrors.
+  test('МЕР777178 valuation is top-tier, far above Caucasian mirror', () {
+    // А101ВА05 — mirror letters АВА + mirror digits 101 + Dagestan 05.
+    const mirrorCaucasus = '\u0410101\u0412\u041005'; // А101ВА05
+    final top = valuation.estimate(
+      countryCode: 'RU',
+      rawText: merPlateTyped, // МЕР777178
+    );
+    final mirror = valuation.estimate(
+      countryCode: 'RU',
+      rawText: mirrorCaucasus,
+    );
+
+    // Expected: mirror Caucasian ~50–150k; МЕР777178 >> that (800k–millions).
+    expect(
+      mirror.amountRub,
+      inInclusiveRange(40_000, 200_000),
+      reason:
+          'mirror+Caucasus should land ~50–150k folklore (got ${mirror.amountRub})',
+    );
+    expect(
+      top.amountRub,
+      greaterThanOrEqualTo(800_000),
+      reason:
+          'МЕР+777+178 must be ≥800k folklore, not ~70k (got ${top.amountRub})',
+    );
+    expect(top.amountRub, greaterThan(mirror.amountRub * 4));
+    expect(
+      top.factors.any((f) => f.category == ValuationFactorCategory.combo),
+      isTrue,
+    );
+    expect(
+      top.factors.any((f) => f.category == ValuationFactorCategory.series),
+      isTrue,
+    );
+    expect(
+      top.factors.any((f) => f.category == ValuationFactorCategory.region),
+      isTrue,
+    );
+  });
+
   test('UK alias resolves to GB', () {
     expect(registry.resolve('UK').code, 'GB');
   });

@@ -16,18 +16,33 @@ class VaultBackground extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
+            Color(0xFF05080F),
             Color(0xFF0A101C),
             VaultColors.voidBg,
-            Color(0xFF0E1828),
-            Color(0xFF0A1520),
+            Color(0xFF0C1A22),
+            Color(0xFF081018),
           ],
-          stops: [0, 0.35, 0.72, 1],
+          stops: [0, 0.22, 0.5, 0.78, 1],
         ),
       ),
       child: Stack(
         fit: StackFit.expand,
         children: [
           CustomPaint(painter: _VaultPatternPainter()),
+          // Soft vignette — deeper vault feel.
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment(0, -0.2),
+                radius: 1.15,
+                colors: [
+                  Colors.transparent,
+                  Color(0x66000000),
+                ],
+                stops: [0.55, 1],
+              ),
+            ),
+          ),
           child,
         ],
       ),
@@ -84,7 +99,7 @@ class _VaultPatternPainter extends CustomPainter {
     final glow = Paint()
       ..shader = RadialGradient(
         colors: [
-          VaultColors.gold.withValues(alpha: 0.10),
+          VaultColors.gold.withValues(alpha: 0.14),
           Colors.transparent,
         ],
       ).createShader(Rect.fromCircle(
@@ -96,7 +111,7 @@ class _VaultPatternPainter extends CustomPainter {
     final glow2 = Paint()
       ..shader = RadialGradient(
         colors: [
-          VaultColors.teal.withValues(alpha: 0.07),
+          VaultColors.teal.withValues(alpha: 0.11),
           Colors.transparent,
         ],
       ).createShader(Rect.fromCircle(
@@ -104,6 +119,18 @@ class _VaultPatternPainter extends CustomPainter {
         radius: size.width * 0.5,
       ));
     canvas.drawRect(Offset.zero & size, glow2);
+
+    final glow3 = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          VaultColors.legendary.withValues(alpha: 0.05),
+          Colors.transparent,
+        ],
+      ).createShader(Rect.fromCircle(
+        center: Offset(size.width * 0.5, size.height * 0.35),
+        radius: size.width * 0.4,
+      ));
+    canvas.drawRect(Offset.zero & size, glow3);
   }
 
   @override

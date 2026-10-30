@@ -31,7 +31,19 @@ class PublicScreen extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           children: [
             if (me != null)
-              Card(
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  gradient: LinearGradient(
+                    colors: [
+                      VaultColors.panel,
+                      VaultColors.teal.withValues(alpha: 0.1),
+                    ],
+                  ),
+                  border: Border.all(
+                    color: VaultColors.gold.withValues(alpha: 0.22),
+                  ),
+                ),
                 child: SwitchListTile(
                   title: const Text('Показывать мою коллекцию'),
                   subtitle: Text(

@@ -70,7 +70,7 @@ class RuCivilianSeriesCatalog implements CountrySeriesCatalog {
     'ВОР': _KnownSeries(
       label: 'ВОР',
       kind: MeaningKind.blatnye,
-      boost: 38,
+      boost: 42,
       text:
           'Классическая «блатная» серия: читается как «вор». У коллекционеров — сильный статусный маркер.',
     ),
@@ -93,15 +93,16 @@ class RuCivilianSeriesCatalog implements CountrySeriesCatalog {
     'МЕР': _KnownSeries(
       label: 'МЕР · ФСБ',
       kind: MeaningKind.security,
-      boost: 48,
+      boost: 58,
       text:
           'Серия МЕР у коллекционеров почти всегда читается как «ФСБ»: по молве на таких номерах ездят машины спецслужб. '
-          'Это фольклор охотников за сериями, не официальный реестр — но смысл серии для сейфа однозначный: силовой / ФСБ.',
+          'Это фольклор охотников за сериями, не официальный реестр — но смысл серии для сейфа однозначный: силовой / ФСБ. '
+          'На столичных регионах с «красивыми» цифрами оценка уходит в сотни тысяч / миллионы ₽.',
     ),
     'ЕКХ': _KnownSeries(
       label: 'ЕКХ',
       kind: MeaningKind.security,
-      boost: 36,
+      boost: 42,
       text:
           'Серия часто связывают с силовыми / спецструктурами Москвы (фольклор коллекционеров, не официальный реестр).',
     ),
@@ -314,7 +315,7 @@ class RuCivilianSeriesCatalog implements CountrySeriesCatalog {
       );
     }
 
-    // FSB vibe: МЕР + capital regions
+    // FSB vibe: МЕР + capital regions (extra rarity signal for МЕР+MSK/SPB)
     if (parts.seriesKey == 'МЕР' &&
         {77, 97, 177, 197, 199, 777, 799, 78, 98, 178, 198}.contains(region)) {
       add(
@@ -322,9 +323,10 @@ class RuCivilianSeriesCatalog implements CountrySeriesCatalog {
           id: 'fsb_vibe_mer_$region',
           labelRu: 'ФСБ-вайб',
           explanationRu:
-              'МЕР на регионе $region — классическая комбинация, которую коллекционеры связывают с ФСБ / спецслужбами на белом гражданском номере.',
+              'МЕР на регионе $region — классическая комбинация, которую коллекционеры связывают с ФСБ / спецслужбами на белом гражданском номере. '
+              'С «777» это уже топ уличного фольклора (сотни тысяч → миллионы ₽), а не «просто красивый» номер.',
           kind: MeaningKind.security,
-          scoreBoost: 12,
+          scoreBoost: 18,
         ),
       );
     }
