@@ -18,7 +18,7 @@ echo === build apk === >> E:\dev\builds\log.txt
 call flutter build apk --release >> E:\dev\builds\log.txt 2>&1
 echo BUILD_EXIT=%ERRORLEVEL% >> E:\dev\builds\log.txt
 if exist build\app\outputs\flutter-apk\app-release.apk (
-  copy /Y build\app\outputs\flutter-apk\app-release.apk E:\dev\builds\plate-vault-1.0.0.apk >> E:\dev\builds\log.txt 2>&1
+  copy /Y build\app\outputs\flutter-apk\app-release.apk E:\dev\builds\plate-vault-release.apk >> E:\dev\builds\log.txt 2>&1
   echo APK_OK >> E:\dev\builds\log.txt
 ) else (
   echo APK_MISSING >> E:\dev\builds\log.txt

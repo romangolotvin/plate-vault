@@ -19,6 +19,16 @@ class SeriesCatalog {
                 RuCivilianSeriesCatalog(),
                 CisCivilianSeriesCatalog(countryCode: 'BY'),
                 CisCivilianSeriesCatalog(countryCode: 'KZ'),
+                // Stubs — expand cool-series lore per market later.
+                StubSeriesCatalog(countryCode: 'UA'),
+                StubSeriesCatalog(countryCode: 'DE'),
+                StubSeriesCatalog(countryCode: 'PL'),
+                StubSeriesCatalog(countryCode: 'FR'),
+                StubSeriesCatalog(countryCode: 'IT'),
+                StubSeriesCatalog(countryCode: 'ES'),
+                StubSeriesCatalog(countryCode: 'GB'),
+                StubSeriesCatalog(countryCode: 'US'),
+                StubSeriesCatalog(countryCode: 'TR'),
               ])
             c.countryCode.toUpperCase(): c,
         };
@@ -379,6 +389,46 @@ class CisCivilianSeriesCatalog implements CountrySeriesCatalog {
         scoreBoost: 2,
       ),
     ];
+  }
+}
+
+/// Placeholder catalog: mirrors / repeating digits only until country lore lands.
+class StubSeriesCatalog implements CountrySeriesCatalog {
+  const StubSeriesCatalog({required this.countryCode});
+
+  @override
+  final String countryCode;
+
+  @override
+  List<PlateMeaningTag> analyze(String normalized) {
+    final tags = <PlateMeaningTag>[];
+    final digits = normalized.replaceAll(RegExp(r'\D'), '');
+    if (digits.length >= 3 && digits.split('').toSet().length == 1) {
+      tags.add(
+        PlateMeaningTag(
+          id: 'stub_same_digits_$countryCode',
+          labelRu: 'Одинаковые цифры',
+          explanationRu:
+              'Повтор цифр на номере $countryCode — задел под локальный каталог серий.',
+          kind: MeaningKind.coolSeries,
+          scoreBoost: 14,
+        ),
+      );
+    }
+    if (digits.length >= 3 &&
+        digits[0] == digits[digits.length - 1] &&
+        digits[0] != digits[1]) {
+      tags.add(
+        PlateMeaningTag(
+          id: 'stub_mirror_$countryCode',
+          labelRu: 'Зеркало цифр',
+          explanationRu: 'Палиндром цифр ($countryCode stub).',
+          kind: MeaningKind.mirrorDigits,
+          scoreBoost: 10,
+        ),
+      );
+    }
+    return tags;
   }
 }
 

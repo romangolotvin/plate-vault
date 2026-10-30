@@ -9,6 +9,8 @@ import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../core/update/update_service.dart';
 import '../../core/widgets/vault_page.dart';
+import '../../data/valuation/currency.dart';
+import '../../data/valuation/plate_valuation_engine.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -123,6 +125,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       : (v) => state.updateProfile(
                             profile.copyWith(publicCollectionEnabled: v),
                           ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(
+                    Icons.payments_outlined,
+                    color: VaultColors.gold,
+                  ),
+                  title: const Text('Валюта оценки'),
+                  subtitle: Text(
+                    'Курс внутри приложения: \$1 = ${PlateValuationEngine.rubPerUsd.toInt()} ₽, '
+                    '€1 = ${PlateValuationEngine.rubPerEur.toInt()} ₽',
+                    style: const TextStyle(color: VaultColors.mist),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                  child: SegmentedButton<AppCurrency>(
+                    segments: [
+                      for (final c in AppCurrency.values)
+                        ButtonSegment(
+                          value: c,
+                          label: Text('${c.symbol} ${c.code}'),
+                        ),
+                    ],
+                    selected: {state.currency},
+                    onSelectionChanged: (set) {
+                      if (set.isNotEmpty) state.setCurrency(set.first);
+                    },
+                  ),
                 ),
                 const Divider(height: 1),
                 ListTile(

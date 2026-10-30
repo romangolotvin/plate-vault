@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 
+import 'package:provider/provider.dart';
+
+import '../../app_state.dart';
 import '../../data/models/collection_item.dart';
 import '../../data/models/rarity.dart';
 import '../../data/rarity/rarity_engine.dart';
 import '../../data/series/plate_meaning.dart';
+import '../../data/valuation/plate_valuation_engine.dart';
 import '../theme.dart';
 import 'plate_badge.dart';
 
@@ -31,6 +35,13 @@ class PlateCard extends StatelessWidget {
             rawText: item.rawText,
           )
         : const <PlateMeaningTag>[];
+    final currency = context.watch<AppState>().currency;
+    final value = PlateValuationEngine.instance.estimate(
+      countryCode: item.countryCode,
+      rawText: item.rawText,
+    );
+    final valueLabel =
+        PlateValuationEngine.instance.formatDetailed(value, currency);
 
     final glow = _rarityGlow(item.rarity);
     return Material(
@@ -90,6 +101,14 @@ class PlateCard extends StatelessWidget {
                 Row(
                   children: [
                     RarityChip(rarity: item.rarity, dense: true),
+                    const SizedBox(width: 8),
+                    Text(
+                      valueLabel,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: VaultColors.gold,
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
                     const SizedBox(width: 8),
                     if (item.isPublic)
                       Text(

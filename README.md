@@ -55,7 +55,14 @@ flutterfire configure
 
 ```
 lib/
-  core/           theme, constants, update
-  data/           models, rarity, ocr, repositories
+  core/           theme, constants, update, LicensePlateView
+  data/
+    plates/       country specs (format + visual + OCR)
+    series/       cool / status series meanings
+    valuation/    collector estimate + currency
+    rarity/, ocr/, models/, repositories/
   features/       auth, collection, scan, public, settings
 ```
+
+Font approximations: [docs/PLATE_FONTS.md](docs/PLATE_FONTS.md).
+Valuation base is RUB; fixed rates `$1 = 92 ₽`, `€1 = 100 ₽`.

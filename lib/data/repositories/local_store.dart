@@ -6,11 +6,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/collection_item.dart';
 import '../models/user_profile.dart';
+import '../valuation/currency.dart';
 
 class LocalStore {
   static const _itemsKey = 'collection_items_v1';
   static const _profileKey = 'user_profile_v1';
   static const _sessionKey = 'local_session_v1';
+  static const _currencyKey = 'preferred_currency_v1';
 
   Future<List<CollectionItem>> loadItems() async {
     final prefs = await SharedPreferences.getInstance();
@@ -55,6 +57,16 @@ class LocalStore {
   Future<bool> hasLocalSession() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_sessionKey) ?? false;
+  }
+
+  Future<AppCurrency> loadCurrency() async {
+    final prefs = await SharedPreferences.getInstance();
+    return AppCurrency.fromCode(prefs.getString(_currencyKey));
+  }
+
+  Future<void> saveCurrency(AppCurrency currency) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_currencyKey, currency.code);
   }
 
   Future<String> photosDir() async {

@@ -46,21 +46,21 @@ class _ScanScreenState extends State<ScanScreen> {
       );
       await File(file.path).copy(saved.path);
 
-      final text = await state.ocrService.recognizeFromFile(saved.path);
+      final ocr = await state.ocrService.recognizeRichFromFile(saved.path);
       if (!mounted) return;
 
       setState(() {
         _previewPath = saved.path;
-        _status = text == null
+        _status = ocr == null
             ? 'Не удалось распознать — введите вручную'
-            : 'Распознано: $text (можете исправить)';
+            : 'Распознано: ${ocr.text} · ${ocr.suggestedCountry}';
       });
 
       await Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => EditPlateScreen(
-            initialText: text ?? '',
-            initialCountry: 'RU',
+            initialText: ocr?.text ?? '',
+            initialCountry: ocr?.suggestedCountry ?? 'RU',
             photoPath: saved.path,
           ),
         ),

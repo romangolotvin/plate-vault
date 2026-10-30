@@ -1,11 +1,16 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plate_vault/data/models/rarity.dart';
+import 'package:plate_vault/data/plates/plate_registry.dart';
 import 'package:plate_vault/data/rarity/rarity_engine.dart';
 import 'package:plate_vault/data/series/plate_meaning.dart';
 import 'package:plate_vault/data/series/series_catalog.dart';
+import 'package:plate_vault/data/valuation/currency.dart';
+import 'package:plate_vault/data/valuation/plate_valuation_engine.dart';
 
 void main() {
   final engine = RarityEngine();
+  final registry = PlateRegistry.instance;
+  final valuation = PlateValuationEngine();
 
   // Cyrillic via escapes so file encoding cannot break plate letters.
   const mer = '\u041C\u0415\u0420'; // МЕР
@@ -66,6 +71,17 @@ void main() {
     expect(parts?.region, '178');
   });
 
+  test('registry RU visual fields for МЕР777178', () {
+    final normalized = engine.normalize(merPlateTyped);
+    final fields = registry.parse('RU', normalized);
+    expect(fields.matched, isTrue);
+    expect(fields['letter'], '\u041C');
+    expect(fields['digits'], '777');
+    expect(fields['series'], '\u0415\u0420');
+    expect(fields['region'], '178');
+    expect(registry.resolve('RU').visual.fidelity.name, 'authentic');
+  });
+
   test('МЕР777178 is recognized as FSB / security, not ordinary', () {
     final result = engine.evaluate(
       countryCode: 'RU',
@@ -110,5 +126,48 @@ void main() {
       rawText: '\u0410001\u041C\u042077',
     );
     expect(amr.meanings.any((m) => m.labelRu.contains('\u0410\u041C\u0420')), isTrue);
+  });
+
+  test('parses EU France SIV format AB123CD', () {
+    final fields = registry.parse('FR', 'AB123CD');
+    expect(fields.matched, isTrue);
+    expect(fields['prefix'], 'AB');
+    expect(fields['digits'], '123');
+    expect(fields['suffix'], 'CD');
+  });
+
+  test('parses German plate BAB1234', () {
+    final fields = registry.parse('DE', 'BAB1234');
+    expect(fields.matched, isTrue);
+    expect(fields['prefix'], 'B');
+    expect(fields['letters'], 'AB');
+    expect(fields['digits'], '1234');
+  });
+
+  test('valuation currency switch RUB/USD/EUR uses fixed rates', () {
+    final v = valuation.estimate(
+      countryCode: 'RU',
+      rawText: merPlateTyped,
+    );
+    expect(v.amountRub > 0, isTrue);
+    expect(
+      v.inCurrency(AppCurrency.usd),
+      closeTo(v.amountRub / PlateValuationEngine.rubPerUsd, 0.01),
+    );
+    expect(
+      v.inCurrency(AppCurrency.eur),
+      closeTo(v.amountRub / PlateValuationEngine.rubPerEur, 0.01),
+    );
+    final rubLabel = valuation.formatDetailed(v, AppCurrency.rub);
+    final usdLabel = valuation.formatDetailed(v, AppCurrency.usd);
+    expect(rubLabel.contains('₽'), isTrue);
+    expect(usdLabel.startsWith('\$'), isTrue);
+    expect(AppCurrency.fromCode('USD'), AppCurrency.usd);
+    expect(AppCurrency.fromCode('EUR'), AppCurrency.eur);
+    expect(AppCurrency.fromCode(null), AppCurrency.rub);
+  });
+
+  test('UK alias resolves to GB', () {
+    expect(registry.resolve('UK').code, 'GB');
   });
 }

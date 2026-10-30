@@ -12,6 +12,7 @@ import 'data/ocr/plate_ocr_service.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/collection_repository.dart';
 import 'data/repositories/local_store.dart';
+import 'data/valuation/currency.dart';
 import 'firebase_options.dart';
 
 class AppState extends ChangeNotifier {
@@ -28,6 +29,8 @@ class AppState extends ChangeNotifier {
   bool ready = false;
   bool cloudEnabled = false;
   String? bootError;
+
+  AppCurrency currency = AppCurrency.rub;
 
   String countryFilter = '';
   Rarity? rarityFilter;
@@ -60,6 +63,7 @@ class AppState extends ChangeNotifier {
       );
       await collectionRepository.load();
       await authRepository.restoreSession();
+      currency = await localStore.loadCurrency();
       await refreshPublic();
     } catch (e, st) {
       bootError = '$e';
@@ -69,11 +73,18 @@ class AppState extends ChangeNotifier {
       collectionRepository = CollectionRepository(localStore: localStore);
       await collectionRepository.load();
       await authRepository.restoreSession();
+      currency = await localStore.loadCurrency();
       cloudEnabled = false;
     } finally {
       ready = true;
       notifyListeners();
     }
+  }
+
+  Future<void> setCurrency(AppCurrency value) async {
+    currency = value;
+    await localStore.saveCurrency(value);
+    notifyListeners();
   }
 
   Future<bool> _tryInitFirebase() async {

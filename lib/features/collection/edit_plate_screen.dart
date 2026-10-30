@@ -6,7 +6,9 @@ import '../../core/theme.dart';
 import '../../core/widgets/plate_badge.dart';
 import '../../core/widgets/vault_scaffold.dart';
 import '../../data/models/collection_item.dart';
+import '../../data/plates/plate_registry.dart';
 import '../../data/rarity/rarity_engine.dart';
+import '../../data/valuation/plate_valuation_engine.dart';
 
 class EditPlateScreen extends StatefulWidget {
   const EditPlateScreen({
@@ -27,24 +29,14 @@ class EditPlateScreen extends StatefulWidget {
 }
 
 class _EditPlateScreenState extends State<EditPlateScreen> {
-  static const _countries = [
-    'RU',
-    'BY',
-    'KZ',
-    'UA',
-    'US',
-    'DE',
-    'FR',
-    'PL',
-    'GB',
-    'IT',
-    'ES',
+  static final _countries = <String>{
+    ...PlateRegistry.instance.codes.where((c) => c != 'GEN'),
     'NL',
-    'TR',
     'CN',
     'JP',
     'XX',
-  ];
+  }.toList()
+    ..sort();
 
   late final TextEditingController _textCtrl;
   late final TextEditingController _notesCtrl;
@@ -73,9 +65,19 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
     final preview = _engine.evaluate(
       countryCode: _country,
       rawText: _textCtrl.text,
+    );
+    final valuation = PlateValuationEngine.instance.estimate(
+      countryCode: _country,
+      rawText: _textCtrl.text,
+      precomputed: preview,
+    );
+    final valueLabel = PlateValuationEngine.instance.formatDetailed(
+      valuation,
+      state.currency,
     );
     final editing = widget.existing != null;
 
@@ -181,12 +183,20 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
                     RarityChip(rarity: preview.rarity),
                     const Spacer(),
                     Text(
-                      'score ${preview.score}',
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      valueLabel,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             color: VaultColors.gold,
+                            fontWeight: FontWeight.w800,
                           ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'score ${preview.score} · оценка коллекционера',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: VaultColors.mist.withValues(alpha: 0.85),
+                      ),
                 ),
                 const SizedBox(height: 10),
                 Text(
