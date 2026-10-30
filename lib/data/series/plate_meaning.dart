@@ -31,7 +31,7 @@ enum MeaningKind {
         MeaningKind.mirrorDigits => const Color(0xFF6EC8FF),
         MeaningKind.coolSeries => const Color(0xFFFF8F6B),
         MeaningKind.blatnye => const Color(0xFFFF5C7A),
-        MeaningKind.security => const Color(0xFF8B9DFF),
+        MeaningKind.security => const Color(0xFF7B8CFF),
         MeaningKind.administration => VaultColors.gold,
         MeaningKind.government => const Color(0xFFD4AF37),
         MeaningKind.regional => VaultColors.uncommon,

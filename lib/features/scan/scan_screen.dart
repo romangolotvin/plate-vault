@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../app_state.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/plate_badge.dart';
 import '../../core/widgets/vault_page.dart';
 import '../collection/edit_plate_screen.dart';
 
@@ -83,16 +84,26 @@ class _ScanScreenState extends State<ScanScreen> {
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: VaultColors.teal.withValues(alpha: 0.35),
+                  color: VaultColors.gold.withValues(alpha: 0.28),
                 ),
                 gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                   colors: [
+                    VaultColors.slate,
+                    VaultColors.panel.withValues(alpha: 0.85),
                     VaultColors.teal.withValues(alpha: 0.12),
-                    VaultColors.panel.withValues(alpha: 0.4),
                   ],
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: VaultColors.teal.withValues(alpha: 0.12),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -100,7 +111,8 @@ class _ScanScreenState extends State<ScanScreen> {
                   Text(
                     'Захват в сейф',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: VaultColors.teal,
+                          color: VaultColors.gold,
+                          fontWeight: FontWeight.w700,
                         ),
                   ),
                   const SizedBox(height: 8),
@@ -110,6 +122,12 @@ class _ScanScreenState extends State<ScanScreen> {
                           color: VaultColors.mist,
                           height: 1.35,
                         ),
+                  ),
+                  const SizedBox(height: 14),
+                  const PlateBadge(
+                    text: 'МЕР777178',
+                    countryCode: 'RU',
+                    compact: true,
                   ),
                 ],
               ),

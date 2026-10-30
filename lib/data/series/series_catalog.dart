@@ -80,6 +80,14 @@ class RuCivilianSeriesCatalog implements CountrySeriesCatalog {
     ),
 
     // Силовые / спецсвязь (фольклор коллекционеров)
+    'МЕР': _KnownSeries(
+      label: 'МЕР · ФСБ',
+      kind: MeaningKind.security,
+      boost: 48,
+      text:
+          'Серия МЕР у коллекционеров почти всегда читается как «ФСБ»: по молве на таких номерах ездят машины спецслужб. '
+          'Это фольклор охотников за сериями, не официальный реестр — но смысл серии для сейфа однозначный: силовой / ФСБ.',
+    ),
     'ЕКХ': _KnownSeries(
       label: 'ЕКХ',
       kind: MeaningKind.security,
@@ -107,6 +115,13 @@ class RuCivilianSeriesCatalog implements CountrySeriesCatalog {
       boost: 24,
       text:
           'Серия ММР в разговорах коллекционеров часто рядом с ведомственными пулами.',
+    ),
+    'СМР': _KnownSeries(
+      label: 'СМР',
+      kind: MeaningKind.security,
+      boost: 28,
+      text:
+          'СМР иногда ставят рядом с «служебными» гражданскими пулами — статусная силовая молва у коллекционеров.',
     ),
     'ООО': _KnownSeries(
       label: 'ООО',
@@ -285,6 +300,21 @@ class RuCivilianSeriesCatalog implements CountrySeriesCatalog {
           explanationRu: 'Регион $region — Санкт-Петербург.',
           kind: MeaningKind.regional,
           scoreBoost: 5,
+        ),
+      );
+    }
+
+    // FSB vibe: МЕР + capital regions
+    if (parts.seriesKey == 'МЕР' &&
+        {77, 97, 177, 197, 199, 777, 799, 78, 98, 178, 198}.contains(region)) {
+      add(
+        PlateMeaningTag(
+          id: 'fsb_vibe_mer_$region',
+          labelRu: 'ФСБ-вайб',
+          explanationRu:
+              'МЕР на регионе $region — классическая комбинация, которую коллекционеры связывают с ФСБ / спецслужбами на белом гражданском номере.',
+          kind: MeaningKind.security,
+          scoreBoost: 12,
         ),
       );
     }

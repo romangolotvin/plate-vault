@@ -84,13 +84,49 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
         title: Text(editing ? 'Редактировать номер' : 'Новый номер'),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
-          PlateBadge(
-            text: _textCtrl.text.isEmpty ? 'А000АА00' : _textCtrl.text,
-            countryCode: _country,
+          Container(
+            padding: const EdgeInsets.fromLTRB(14, 16, 14, 18),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  VaultColors.slate.withValues(alpha: 0.95),
+                  VaultColors.charcoal.withValues(alpha: 0.9),
+                ],
+              ),
+              border: Border.all(
+                color: VaultColors.gold.withValues(alpha: 0.22),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: VaultColors.gold.withValues(alpha: 0.08),
+                  blurRadius: 24,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Text(
+                  'ГОСНОМЕР',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: VaultColors.gold.withValues(alpha: 0.85),
+                        letterSpacing: 2.2,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                PlateBadge(
+                  text: _textCtrl.text.isEmpty ? 'А000АА00' : _textCtrl.text,
+                  countryCode: _country,
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           TextField(
             controller: _textCtrl,
             textCapitalization: TextCapitalization.characters,
@@ -100,7 +136,7 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
             ),
             decoration: const InputDecoration(
               labelText: 'Госномер',
-              hintText: 'А123ВС77',
+              hintText: 'МЕР777178',
             ),
             onChanged: (_) => setState(() {}),
           ),
@@ -122,42 +158,52 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
               labelText: 'Заметка (необязательно)',
             ),
           ),
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      RarityChip(rarity: preview.rarity),
-                      const Spacer(),
-                      Text(
-                        'score ${preview.score}',
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: VaultColors.gold,
-                            ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    preview.reason,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: VaultColors.mist,
-                          height: 1.35,
-                        ),
-                  ),
-                  if (preview.meanings.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    MeaningChips(meanings: preview.meanings),
-                  ],
+          const SizedBox(height: 18),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: LinearGradient(
+                colors: [
+                  VaultColors.panel,
+                  VaultColors.slate.withValues(alpha: 0.85),
                 ],
               ),
+              border: Border.all(
+                color: VaultColors.gold.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    RarityChip(rarity: preview.rarity),
+                    const Spacer(),
+                    Text(
+                      'score ${preview.score}',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: VaultColors.gold,
+                          ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  preview.reason,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: VaultColors.mist,
+                        height: 1.35,
+                      ),
+                ),
+                if (preview.meanings.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  MeaningChips(meanings: preview.meanings),
+                ],
+              ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           MeaningDetailCard(meanings: preview.meanings),
           if (widget.photoPath != null) ...[
             const SizedBox(height: 8),

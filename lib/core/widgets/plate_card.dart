@@ -32,6 +32,7 @@ class PlateCard extends StatelessWidget {
           )
         : const <PlateMeaningTag>[];
 
+    final glow = _rarityGlow(item.rarity);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -44,17 +45,18 @@ class PlateCard extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                VaultColors.panel.withValues(alpha: 0.95),
-                VaultColors.slate.withValues(alpha: 0.88),
+                VaultColors.panel.withValues(alpha: 0.98),
+                VaultColors.slate.withValues(alpha: 0.9),
+                glow.withValues(alpha: 0.08),
               ],
             ),
             border: Border.all(
-              color: _rarityGlow(item.rarity).withValues(alpha: 0.35),
+              color: glow.withValues(alpha: 0.4),
             ),
             boxShadow: [
               BoxShadow(
-                color: _rarityGlow(item.rarity).withValues(alpha: 0.12),
-                blurRadius: 18,
+                color: glow.withValues(alpha: 0.16),
+                blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
             ],

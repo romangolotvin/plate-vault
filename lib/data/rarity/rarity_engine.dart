@@ -10,7 +10,6 @@ class RarityEngine {
 
   static final RarityEngine instance = RarityEngine();
 
-  static final _cyrillic = RegExp(r'[А-ЯЁ]');
   static final _repeating = RegExp(r'(.)\1{2,}');
   static final _sequentialAsc = RegExp(
     r'(012|123|234|345|456|567|678|789|890)',
@@ -81,14 +80,68 @@ class RarityEngine {
     );
   }
 
+  /// Latin glyphs that look like RU plate letters (АВЕКМНОРСТУХ).
+  /// OCR / QWERTY often emit these instead of Cyrillic.
+  /// Also map phonetic R→Р (users type MER for МЕР; visual lookalike is P).
+  static const _latinToRuPlate = <String, String>{
+    'A': 'А',
+    'B': 'В',
+    'E': 'Е',
+    'K': 'К',
+    'M': 'М',
+    'H': 'Н',
+    'O': 'О',
+    'P': 'Р',
+    'R': 'Р',
+    'C': 'С',
+    'T': 'Т',
+    'Y': 'У',
+    'X': 'Х',
+  };
+
+  static final _cyrillic = RegExp(r'[А-ЯЁ]');
+  static final _latinRuShape = RegExp(
+    r'^[ABEKMHOPCTYXR]\d{3}[ABEKMHOPCTYXR]{2}\d{2,3}$',
+  );
+  /// Typed as series-first: МЕР777178 → official М777ЕР178.
+  static final _latinSeriesFirst = RegExp(
+    r'^[ABEKMHOPCTYXR]{3}\d{3}\d{2,3}$',
+  );
+  static final _ruSeriesFirst = RegExp(
+    r'^([АВЕКМНОРСТУХ]{3})(\d{3})(\d{2,3})$',
+  );
+
   String normalize(String raw) {
     var text = raw.toUpperCase().trim();
     text = text
         .replaceAll('Ё', 'Е')
-        .replaceAll(RegExp(r'[\s\-·•.]'), '')
-        .replaceAll('O', _cyrillic.hasMatch(raw) ? 'О' : 'O');
-    // Keep only letters and digits.
+        .replaceAll(RegExp(r'[\s\-·•.]'), '');
+    // Keep only letters and digits first for shape checks.
     text = text.replaceAll(RegExp(r'[^A-ZА-Я0-9]'), '');
+
+    // Map Latin lookalikes → Cyrillic when input is already RU / RU-shaped.
+    // Avoid rewriting genuine Latin plates (US/EU).
+    final mapToRu = _cyrillic.hasMatch(text) ||
+        _latinRuShape.hasMatch(text) ||
+        _latinSeriesFirst.hasMatch(text);
+    if (mapToRu) {
+      final mapped = StringBuffer();
+      for (final rune in text.runes) {
+        final ch = String.fromCharCode(rune);
+        mapped.write(_latinToRuPlate[ch] ?? ch);
+      }
+      text = mapped.toString();
+    }
+
+    // Reshape collector typing «МЕР777178» → official «М777ЕР178».
+    final seriesFirst = _ruSeriesFirst.firstMatch(text);
+    if (seriesFirst != null) {
+      final letters = seriesFirst.group(1)!;
+      final digits = seriesFirst.group(2)!;
+      final region = seriesFirst.group(3)!;
+      text = '${letters[0]}$digits${letters[1]}${letters[2]}$region';
+    }
+
     return text;
   }
 
