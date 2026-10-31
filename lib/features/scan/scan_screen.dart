@@ -9,8 +9,11 @@ import '../../core/theme.dart';
 import '../../core/widgets/plate_badge.dart';
 import '../../core/widgets/vault_cta.dart';
 import '../../core/widgets/vault_page.dart';
+import '../../data/anticheat/frame_similarity_io.dart';
+import '../../data/anticheat/motion_gate.dart';
 import '../../data/models/trust_level.dart';
 import '../collection/edit_plate_screen.dart';
+import '../daily/daily_contract_card.dart';
 
 enum _CaptureStep { idle, wide, close, processing }
 
@@ -95,7 +98,8 @@ class _ScanScreenState extends State<ScanScreen>
               const SizedBox(height: 10),
               Text(
                 'Чтобы номер попал в Street, снимите его дважды с разных углов. '
-                'Так сложнее «сфотографировать монитор» вместо живой машины.',
+                'Если кадры почти одинаковые, приложение попросит переснять — '
+                'так сложнее «сфоткать монитор».',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: VaultColors.mist,
                       height: 1.4,
@@ -110,6 +114,12 @@ class _ScanScreenState extends State<ScanScreen>
               const SizedBox(height: 12),
               _TutorialStep(
                 n: '2',
+                title: 'Сдвиньте телефон',
+                body: 'Смените угол или расстояние — датчик движения поможет.',
+              ),
+              const SizedBox(height: 12),
+              _TutorialStep(
+                n: '3',
                 title: 'Крупный план',
                 body: 'Подойдите ближе — только табличка, читаемые символы.',
               ),
@@ -170,27 +180,98 @@ class _ScanScreenState extends State<ScanScreen>
     setState(() {
       _widePath = wide;
       _step = _CaptureStep.close;
-      _status = 'Теперь крупный план таблички…';
+      _status = 'Сдвиньте телефон и смените угол…';
     });
 
-    final close = await _captureCamera('close');
+    // Optional motion between angles (fail-open if sensors missing).
+    final motion = await MotionGate().waitForMotion();
     if (!mounted) return;
-    if (close == null) {
+    if (!motion.ok) {
+      setState(() {
+        _status = motion.messageRu;
+      });
+      // Soft warn — still allow second shot after user moves.
+      await Future<void>.delayed(const Duration(milliseconds: 700));
+      if (!mounted) return;
+    } else if (!motion.skipped) {
+      setState(() => _status = motion.messageRu);
+    }
+
+    setState(() => _status = 'Теперь крупный план таблички…');
+
+    final closeRaw = await _captureCamera('close');
+    if (!mounted) return;
+    if (closeRaw == null) {
       setState(() {
         _step = _CaptureStep.idle;
         _status = 'Крупный план отменён — начните снова';
       });
       return;
     }
+    var closePath = closeRaw;
+
+    // Anti-cheat: reject near-identical dual frames.
     setState(() {
-      _closePath = close;
+      _closePath = closePath;
+      _status = 'Проверяем, что ракурсы разные…';
+    });
+    try {
+      final verdict = await FrameSimilarityIo.compareFiles(
+        pathA: wide,
+        pathB: closePath,
+      );
+      if (!mounted) return;
+      if (verdict.tooSimilar) {
+        setState(() {
+          _status = verdict.messageRu;
+          _step = _CaptureStep.close;
+          _closePath = null;
+        });
+        final retry = await _captureCamera('close_retry');
+        if (!mounted) return;
+        if (retry == null) {
+          setState(() {
+            _step = _CaptureStep.idle;
+            _status = 'Нужен другой угол — начните снова';
+          });
+          return;
+        }
+        final retryVerdict = await FrameSimilarityIo.compareFiles(
+          pathA: wide,
+          pathB: retry,
+        );
+        if (!mounted) return;
+        if (retryVerdict.tooSimilar) {
+          setState(() {
+            _step = _CaptureStep.idle;
+            _status =
+                'Кадры всё ещё слишком похожи. Снимите заново с другого расстояния.';
+          });
+          return;
+        }
+        closePath = retry;
+        setState(() {
+          _closePath = closePath;
+          _status = retryVerdict.messageRu;
+        });
+      } else {
+        setState(() => _status = verdict.messageRu);
+      }
+    } catch (e) {
+      // Fail-open on decode errors.
+      debugPrint('Frame similarity skipped: $e');
+    }
+
+    setState(() {
+      _closePath = closePath;
       _step = _CaptureStep.processing;
       _status = 'Распознаём лучший кадр…';
     });
 
     try {
       final state = context.read<AppState>();
-      final ocr = await state.ocrService.recognizeBestFromFiles([close, wide]);
+      final ocr =
+          await state.ocrService.recognizeBestFromFiles([closePath, wide]);
       if (!mounted) return;
 
       setState(() {
@@ -208,7 +289,7 @@ class _ScanScreenState extends State<ScanScreen>
               initialText: ocr?.text ?? '',
               initialCountry: ocr?.suggestedCountry ?? 'RU',
               photoPath: wide,
-              photoPathAlt: close,
+              photoPathAlt: closePath,
               captureSource: CaptureSource.liveCamera,
               trust: TrustLevel.street,
             ),
@@ -250,6 +331,8 @@ class _ScanScreenState extends State<ScanScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    const DailyContractCard(compact: true),
+                    const SizedBox(height: 12),
                     Expanded(
                       flex: 5,
                       child: VaultHeroPanel(

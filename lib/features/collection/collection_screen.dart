@@ -10,6 +10,10 @@ import '../../core/widgets/vault_cta.dart';
 import '../../core/widgets/vault_page.dart';
 import '../../data/models/rarity.dart';
 import '../../data/valuation/plate_valuation_engine.dart';
+import '../daily/daily_contract_card.dart';
+import '../encyclopedia/series_encyclopedia_screen.dart';
+import '../museum/museum_section.dart';
+import '../sets/sets_screen.dart';
 import 'edit_plate_screen.dart';
 
 class CollectionScreen extends StatelessWidget {
@@ -45,6 +49,22 @@ class CollectionScreen extends StatelessWidget {
         title: const Text('Моя коллекция'),
         actions: [
           IconButton(
+            tooltip: 'Энциклопедия серий',
+            onPressed: () => openSeriesEncyclopedia(context),
+            icon: const Icon(Icons.menu_book_rounded,
+                color: VaultColors.purpleBright),
+          ),
+          IconButton(
+            tooltip: 'Альбомы',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const SetsScreen()),
+              );
+            },
+            icon: const Icon(Icons.collections_bookmark_outlined,
+                color: VaultColors.magenta),
+          ),
+          IconButton(
             tooltip: 'Достижения',
             onPressed: () => _showAchievements(context, state),
             icon: Badge(
@@ -58,120 +78,125 @@ class CollectionScreen extends StatelessWidget {
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-            child: _VaultWorthHeader(
-              count: state.collectionRepository.items.length,
-              streetCount: state.streetCount,
-              totalLabel: totalLabel,
-              streetLabel: streetLabel,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-            child: TextField(
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search, color: VaultColors.mist),
-                hintText: 'Поиск по номеру или серии',
-              ),
-              onChanged: (v) => state.setFilters(query: v),
-            ),
-          ),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
-              children: [
-                _SortChip(
-                  label: 'Новые',
-                  selected: state.sort == CollectionSort.newest,
-                  onTap: () =>
-                      state.setFilters(sortBy: CollectionSort.newest),
-                ),
-                const SizedBox(width: 8),
-                _SortChip(
-                  label: 'По цене',
-                  selected: state.sort == CollectionSort.valueDesc,
-                  onTap: () =>
-                      state.setFilters(sortBy: CollectionSort.valueDesc),
-                ),
-                const SizedBox(width: 8),
-                _SortChip(
-                  label: 'Street↑',
-                  selected: state.sort == CollectionSort.streetFirst,
-                  onTap: () =>
-                      state.setFilters(sortBy: CollectionSort.streetFirst),
-                ),
-                const SizedBox(width: 8),
-                _SortChip(
-                  label: 'Редкость',
-                  selected: state.sort == CollectionSort.rarityDesc,
-                  onTap: () =>
-                      state.setFilters(sortBy: CollectionSort.rarityDesc),
-                ),
-                const SizedBox(width: 8),
-                FilterChip(
-                  selected: state.trustFilter == TrustFilter.street,
-                  label: const Text('Street'),
-                  onSelected: (v) => state.setFilters(
-                    trust: v ? TrustFilter.street : TrustFilter.all,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                FilterChip(
-                  selected: state.favoritesOnly,
-                  label: const Text('★'),
-                  onSelected: (v) => state.setFilters(favOnly: v),
-                ),
-                const SizedBox(width: 8),
-                FilterChip(
-                  selected: state.showcaseOnly,
-                  label: const Text('Витрина'),
-                  onSelected: (v) => state.setFilters(showOnly: v),
-                ),
-                const SizedBox(width: 8),
-                FilterChip(
-                  label: Text(
-                    state.countryFilter.isEmpty
-                        ? 'Страна: все'
-                        : 'Страна: ${state.countryFilter}',
-                  ),
-                  onSelected: (_) => _pickCountry(context, state),
-                ),
-                const SizedBox(width: 8),
-                ...Rarity.values.map((r) {
-                  final selected = state.rarityFilter == r;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: FilterChip(
-                      selected: selected,
-                      label: Text(r.labelRu),
-                      onSelected: (v) {
-                        if (v) {
-                          state.setFilters(rarity: r);
-                        } else {
-                          state.setFilters(clearRarity: true);
-                        }
-                      },
-                    ),
-                  );
-                }),
-              ],
-            ),
-          ),
           Expanded(
-            child: items.isEmpty
-                ? const _EmptyVault()
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                    itemCount: items.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final item = items[index];
-                      return TweenAnimationBuilder<double>(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+              children: [
+                _VaultWorthHeader(
+                  count: state.collectionRepository.items.length,
+                  streetCount: state.streetCount,
+                  totalLabel: totalLabel,
+                  streetLabel: streetLabel,
+                ),
+                const SizedBox(height: 12),
+                const DailyContractCard(),
+                const SizedBox(height: 12),
+                const SetsTeaserCard(),
+                const SizedBox(height: 12),
+                MuseumSection(items: state.collectionRepository.items),
+                const SizedBox(height: 14),
+                TextField(
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.search, color: VaultColors.mist),
+                    hintText: 'Поиск по номеру или серии',
+                  ),
+                  onChanged: (v) => state.setFilters(query: v),
+                ),
+                const SizedBox(height: 10),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _SortChip(
+                        label: 'Новые',
+                        selected: state.sort == CollectionSort.newest,
+                        onTap: () =>
+                            state.setFilters(sortBy: CollectionSort.newest),
+                      ),
+                      const SizedBox(width: 8),
+                      _SortChip(
+                        label: 'По цене',
+                        selected: state.sort == CollectionSort.valueDesc,
+                        onTap: () => state.setFilters(
+                            sortBy: CollectionSort.valueDesc),
+                      ),
+                      const SizedBox(width: 8),
+                      _SortChip(
+                        label: 'Street↑',
+                        selected: state.sort == CollectionSort.streetFirst,
+                        onTap: () => state.setFilters(
+                            sortBy: CollectionSort.streetFirst),
+                      ),
+                      const SizedBox(width: 8),
+                      _SortChip(
+                        label: 'Редкость',
+                        selected: state.sort == CollectionSort.rarityDesc,
+                        onTap: () => state.setFilters(
+                            sortBy: CollectionSort.rarityDesc),
+                      ),
+                      const SizedBox(width: 8),
+                      FilterChip(
+                        selected: state.trustFilter == TrustFilter.street,
+                        label: const Text('Street'),
+                        onSelected: (v) => state.setFilters(
+                          trust: v ? TrustFilter.street : TrustFilter.all,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      FilterChip(
+                        selected: state.favoritesOnly,
+                        label: const Text('★'),
+                        onSelected: (v) => state.setFilters(favOnly: v),
+                      ),
+                      const SizedBox(width: 8),
+                      FilterChip(
+                        selected: state.showcaseOnly,
+                        label: const Text('Музей'),
+                        onSelected: (v) => state.setFilters(showOnly: v),
+                      ),
+                      const SizedBox(width: 8),
+                      FilterChip(
+                        label: Text(
+                          state.countryFilter.isEmpty
+                              ? 'Страна: все'
+                              : 'Страна: ${state.countryFilter}',
+                        ),
+                        onSelected: (_) => _pickCountry(context, state),
+                      ),
+                      const SizedBox(width: 8),
+                      ...Rarity.values.map((r) {
+                        final selected = state.rarityFilter == r;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: FilterChip(
+                            selected: selected,
+                            label: Text(r.labelRu),
+                            onSelected: (v) {
+                              if (v) {
+                                state.setFilters(rarity: r);
+                              } else {
+                                state.setFilters(clearRarity: true);
+                              }
+                            },
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (items.isEmpty)
+                  const SizedBox(height: 320, child: _EmptyVault())
+                else
+                  ...List.generate(items.length, (index) {
+                    final item = items[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: TweenAnimationBuilder<double>(
                         key: ValueKey(item.id),
                         tween: Tween(begin: 0.94, end: 1),
-                        duration: Duration(milliseconds: 280 + (index % 5) * 40),
+                        duration:
+                            Duration(milliseconds: 280 + (index % 5) * 40),
                         curve: Curves.easeOutBack,
                         builder: (context, scale, child) =>
                             Transform.scale(scale: scale, child: child),
@@ -188,16 +213,35 @@ class CollectionScreen extends StatelessWidget {
                           },
                           onDelete: () => state.deletePlate(item.id),
                           onFavorite: () => state.toggleFavorite(item),
-                          onShowcase: () => state.toggleShowcase(item),
+                          onShowcase: () async {
+                            final before = item.isShowcase;
+                            await state.toggleShowcase(item);
+                            if (!context.mounted) return;
+                            if (!before &&
+                                !state.collectionRepository.items
+                                    .any((e) =>
+                                        e.id == item.id && e.isShowcase)) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Музей: максимум 6 Street-номеров на витрине '
+                                    '(или номер не Street).',
+                                  ),
+                                ),
+                              );
+                            }
+                          },
                           onShare: () => showSharePlateCard(
                             context,
                             item: item,
                             currency: state.currency,
                           ),
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    );
+                  }),
+              ],
+            ),
           ),
         ],
       ),

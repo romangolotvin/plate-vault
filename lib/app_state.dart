@@ -6,15 +6,18 @@ import 'package:flutter/material.dart';
 
 import 'core/update/update_service.dart';
 import 'data/achievements/achievements.dart';
+import 'data/daily/daily_contract.dart';
 import 'data/leaderboard/leaderboard_service.dart';
 import 'data/models/collection_item.dart';
 import 'data/models/rarity.dart';
 import 'data/models/trust_level.dart';
 import 'data/models/user_profile.dart';
+import 'data/museum/museum_picker.dart';
 import 'data/ocr/plate_ocr_service.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/collection_repository.dart';
 import 'data/repositories/local_store.dart';
+import 'data/sets/plate_sets.dart';
 import 'data/sightings/sighting_service.dart';
 import 'data/valuation/currency.dart';
 import 'data/valuation/plate_valuation_engine.dart';
@@ -56,8 +59,18 @@ class AppState extends ChangeNotifier {
   List<UserProfile> publicProfiles = [];
   List<LeaderboardEntry> streetBoard = [];
 
+  DailyContractState? dailyState;
+
   UserProfile? get profile => authRepository.currentProfile;
   bool get isSignedIn => profile != null;
+
+  List<PlateSetProgress> get setProgress =>
+      PlateSetsCatalog.progressFor(collectionRepository.items);
+
+  List<CollectionItem> get museumPlates =>
+      MuseumPicker.pick(collectionRepository.items);
+
+  double get dailyBonusRub => dailyState?.lifetimeBonusRub ?? 0;
 
   List<CollectionItem> get myItems {
     var items = collectionRepository.filtered(
@@ -114,10 +127,12 @@ class AppState extends ChangeNotifier {
         kind: LeaderboardKind.unverified,
       );
 
-  double get streetWorthRub => leaderboardService.portfolioWorth(
+  double get streetWorthRub =>
+      leaderboardService.portfolioWorth(
         collectionRepository.items,
         kind: LeaderboardKind.street,
-      );
+      ) +
+      dailyBonusRub;
 
   int get streetCount => leaderboardService.plateCount(
         collectionRepository.items,
@@ -153,6 +168,7 @@ class AppState extends ChangeNotifier {
       await collectionRepository.load();
       await authRepository.restoreSession();
       currency = await localStore.loadCurrency();
+      await _loadDailyState();
       await refreshPublic();
       await refreshLeaderboards();
     } catch (e, st) {
@@ -165,12 +181,56 @@ class AppState extends ChangeNotifier {
       await collectionRepository.load();
       await authRepository.restoreSession();
       currency = await localStore.loadCurrency();
+      await _loadDailyState();
       cloudEnabled = false;
       await refreshLeaderboards();
     } finally {
       ready = true;
       notifyListeners();
     }
+  }
+
+  Future<void> _loadDailyState() async {
+    final contract = DailyContract.forDay();
+    final completed = await localStore.loadDailyCompletedDay();
+    final bonus = await localStore.loadDailyLifetimeBonus();
+    final badges = await localStore.loadDailyBadges();
+    dailyState = DailyContractState(
+      contract: contract,
+      completedDayKey: completed,
+      lifetimeBonusRub: bonus,
+      badges: badges,
+    );
+  }
+
+  /// Called after a Street plate is saved. Returns true if today's contract completed.
+  Future<bool> tryCompleteDailyContract(CollectionItem item) async {
+    final current = dailyState ??
+        DailyContractState(
+          contract: DailyContract.forDay(),
+          completedDayKey: null,
+          lifetimeBonusRub: 0,
+          badges: const [],
+        );
+    if (current.isCompleteToday) return false;
+    if (!current.contract.matchesItem(item)) return false;
+
+    final badges = [...current.badges];
+    if (!badges.contains(current.contract.badgeRu)) {
+      badges.add(current.contract.badgeRu);
+    }
+    final bonus = current.lifetimeBonusRub + current.contract.bonusRub;
+    await localStore.saveDailyCompletedDay(current.contract.dayKey);
+    await localStore.saveDailyLifetimeBonus(bonus);
+    await localStore.saveDailyBadges(badges);
+    dailyState = DailyContractState(
+      contract: current.contract,
+      completedDayKey: current.contract.dayKey,
+      lifetimeBonusRub: bonus,
+      badges: badges,
+    );
+    notifyListeners();
+    return true;
   }
 
   Future<void> setCurrency(AppCurrency value) async {
@@ -286,6 +346,7 @@ class AppState extends ChangeNotifier {
     await authRepository.updateProfile(
       user.copyWith(itemCount: collectionRepository.items.length),
     );
+    await tryCompleteDailyContract(item);
     await refreshLeaderboards();
     notifyListeners();
     return item;
@@ -314,6 +375,15 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> toggleShowcase(CollectionItem item) async {
+    if (!item.isShowcase) {
+      if (!item.isStreet) {
+        // Museum is Street-only.
+        return;
+      }
+      if (!MuseumPicker.canAddShowcase(collectionRepository.items)) {
+        return;
+      }
+    }
     await updatePlate(item.copyWith(isShowcase: !item.isShowcase));
   }
 
@@ -375,8 +445,46 @@ class AppState extends ChangeNotifier {
       me: me,
       myItems: mine,
     );
+    // Inject daily-contract flex bonus into local "me" row.
+    if (me != null && dailyBonusRub > 0) {
+      streetBoard = [
+        for (final e in streetBoard)
+          if (e.isMe)
+            LeaderboardEntry(
+              rank: e.rank,
+              userId: e.userId,
+              displayName: e.displayName,
+              portfolioRub: e.portfolioRub + dailyBonusRub,
+              plateCount: e.plateCount,
+              kind: e.kind,
+              isMe: true,
+            )
+          else
+            e,
+      ]..sort((a, b) {
+          final c = b.portfolioRub.compareTo(a.portfolioRub);
+          if (c != 0) return c;
+          return b.plateCount.compareTo(a.plateCount);
+        });
+      streetBoard = [
+        for (var i = 0; i < streetBoard.length; i++)
+          LeaderboardEntry(
+            rank: i + 1,
+            userId: streetBoard[i].userId,
+            displayName: streetBoard[i].displayName,
+            portfolioRub: streetBoard[i].portfolioRub,
+            plateCount: streetBoard[i].plateCount,
+            kind: streetBoard[i].kind,
+            isMe: streetBoard[i].isMe,
+          ),
+      ];
+    }
     if (me != null) {
-      await leaderboardService.publishMine(me: me, myItems: mine);
+      await leaderboardService.publishMine(
+        me: me,
+        myItems: mine,
+        dailyBonusRub: dailyBonusRub,
+      );
     }
     notifyListeners();
   }

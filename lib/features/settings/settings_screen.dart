@@ -12,6 +12,8 @@ import '../../core/widgets/vault_cta.dart';
 import '../../core/widgets/vault_page.dart';
 import '../../data/valuation/currency.dart';
 import '../../data/valuation/plate_valuation_engine.dart';
+import '../encyclopedia/series_encyclopedia_screen.dart';
+import '../sets/sets_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -172,6 +174,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         : 'Не настроено (локальный счётчик находок)',
                     style: const TextStyle(color: VaultColors.mist),
                   ),
+                ),
+                Divider(
+                    height: 1,
+                    color: VaultColors.purple.withValues(alpha: 0.14)),
+                ListTile(
+                  leading: const Icon(Icons.menu_book_rounded,
+                      color: VaultColors.purpleBright),
+                  title: const Text('Энциклопедия серий'),
+                  subtitle: const Text(
+                    'МЕР · ЕКХ · АМР · ВОР и другие',
+                    style: TextStyle(color: VaultColors.mist),
+                  ),
+                  onTap: () => openSeriesEncyclopedia(context),
+                ),
+                Divider(
+                    height: 1,
+                    color: VaultColors.purple.withValues(alpha: 0.14)),
+                ListTile(
+                  leading: const Icon(Icons.collections_bookmark_outlined,
+                      color: VaultColors.magenta),
+                  title: const Text('Альбомы и сеты'),
+                  subtitle: const Text(
+                    'Питер 178 · Семёрки · Админ · ФСБ…',
+                    style: TextStyle(color: VaultColors.mist),
+                  ),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const SetsScreen(),
+                      ),
+                    );
+                  },
                 ),
                 Divider(
                     height: 1,

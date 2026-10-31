@@ -185,11 +185,12 @@ class LeaderboardService {
   Future<void> publishMine({
     required UserProfile me,
     required List<CollectionItem> myItems,
+    double dailyBonusRub = 0,
   }) async {
     if (!_cloudEnabled || _firestore == null) return;
     try {
       const kind = LeaderboardKind.street;
-      final worth = portfolioWorth(myItems, kind: kind);
+      final worth = portfolioWorth(myItems, kind: kind) + dailyBonusRub;
       final count = plateCount(myItems, kind: kind);
       await _firestore!
           .collection('leaderboards')

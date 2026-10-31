@@ -15,6 +15,9 @@ class LocalStore {
   static const _currencyKey = 'preferred_currency_v1';
   static const _sightingsKey = 'plate_sightings_v1';
   static const _dualAngleTutorialKey = 'dual_angle_tutorial_seen_v1';
+  static const _dailyCompletedKey = 'daily_contract_completed_day_v1';
+  static const _dailyBonusKey = 'daily_contract_lifetime_bonus_v1';
+  static const _dailyBadgesKey = 'daily_contract_badges_v1';
 
   Future<List<CollectionItem>> loadItems() async {
     final prefs = await SharedPreferences.getInstance();
@@ -110,5 +113,35 @@ class LocalStore {
   Future<void> setDualAngleTutorialSeen() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_dualAngleTutorialKey, true);
+  }
+
+  Future<String?> loadDailyCompletedDay() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_dailyCompletedKey);
+  }
+
+  Future<void> saveDailyCompletedDay(String dayKey) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_dailyCompletedKey, dayKey);
+  }
+
+  Future<double> loadDailyLifetimeBonus() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble(_dailyBonusKey) ?? 0;
+  }
+
+  Future<void> saveDailyLifetimeBonus(double rub) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_dailyBonusKey, rub);
+  }
+
+  Future<List<String>> loadDailyBadges() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(_dailyBadgesKey) ?? const [];
+  }
+
+  Future<void> saveDailyBadges(List<String> badges) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_dailyBadgesKey, badges);
   }
 }

@@ -63,6 +63,35 @@ class RuCivilianSeriesCatalog implements CountrySeriesCatalog {
     r'^([АВЕКМНОРСТУХ])(\d{3})([АВЕКМНОРСТУХ]{2})(\d{2,3})$',
   );
 
+  /// Public encyclopedia entries (collector folklore, not official registry).
+  static List<KnownSeriesEntry> encyclopediaEntries() {
+    final entries = _knownSeries.entries
+        .map(
+          (e) => KnownSeriesEntry(
+            seriesKey: e.key,
+            label: e.value.label,
+            kind: e.value.kind,
+            boost: e.value.boost,
+            text: e.value.text,
+          ),
+        )
+        .toList()
+      ..sort((a, b) => a.seriesKey.compareTo(b.seriesKey));
+    return entries;
+  }
+
+  static KnownSeriesEntry? encyclopediaByKey(String seriesKey) {
+    final known = _knownSeries[seriesKey.toUpperCase()];
+    if (known == null) return null;
+    return KnownSeriesEntry(
+      seriesKey: seriesKey.toUpperCase(),
+      label: known.label,
+      kind: known.kind,
+      boost: known.boost,
+      text: known.text,
+    );
+  }
+
   /// Known status / folklore series among collectors (civilian alphabet only).
   /// Not official registry — collector lore for meaning + rarity boost.
   static const _knownSeries = <String, _KnownSeries>{
@@ -620,6 +649,23 @@ class _KnownSeries {
     required this.text,
   });
 
+  final String label;
+  final MeaningKind kind;
+  final int boost;
+  final String text;
+}
+
+/// Public encyclopedia row for RU civilian folklore series.
+class KnownSeriesEntry {
+  const KnownSeriesEntry({
+    required this.seriesKey,
+    required this.label,
+    required this.kind,
+    required this.boost,
+    required this.text,
+  });
+
+  final String seriesKey;
   final String label;
   final MeaningKind kind;
   final int boost;

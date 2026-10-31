@@ -1,21 +1,21 @@
-# Plate Vault 1.4.0 — Black+purple Street vault
+# Plate Vault 1.5.0 — Albums, Museum, Daily Contract
 
-## UI
-- Full black + purple redesign: gradient CTAs, hero panels, denser layouts (scan / auth / collection / leaderboard / settings)
-- Custom vault buttons (size, radius, glow) — no sparse Material-default screens
+## Albums / Museum
+- Thematic Street sets with progress fill: Питер 178, Семёрки, Админ-серии, МЕР/ФСБ, Зеркала, Блатные, Москва
+- **Музей**: up to 6 best Street plates on collection + public profile (manual showcase first, then by value)
 
-## Capture
-- **Camera only** — gallery and manual add removed from UX
-- **Dual-angle Street**: wide/context + close-up in sequence; OCR from best frame; both photos stored
-- First-run + always-available tutorial (why two angles: harder to fake a monitor photo)
+## Daily contract
+- One hunt challenge per local calendar day (MSK region / triple digits / non-RU / mirror)
+- Shown on home + scan; completes when a matching Street plate is saved
+- Bonus ₽ toward Street leaderboard flex + badge; day key persisted locally
 
-## Leaderboard
-- **One** Street board sorted by portfolio value/price
-- Unverified dual-board UI removed
+## Anti-cheat lite
+- Dual-angle similarity check (average-hash + luma histogram) — too-similar frames rejected with Russian UX
+- Soft device-motion nudge between shots when sensors available
 
-## Sightings
-- «Этот номер уже находили N раз» after scan confirm and on collection tiles
-- Local aggregate always; Firebase `plate_sightings` increment when cloud is configured
+## Series encyclopedia
+- Browse RU folklore series (МЕР, ЕКХ, АМР, ВОР…) with short texts
+- Tap meaning chips on plates to jump into the encyclopedia
 
 ## Install / OTA
 1. Install this APK (or **Настройки → Проверить обновления**)

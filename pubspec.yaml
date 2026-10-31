@@ -1,7 +1,7 @@
 name: plate_vault
 description: Collect license plates from any country — scan, rate rarity, share.
 publish_to: "none"
-version: 1.4.0+7
+version: 1.5.0+8
 
 environment:
   sdk: ^3.13.7
@@ -24,6 +24,7 @@ dependencies:
   firebase_core: ^4.1.1
   firebase_auth: ^6.1.0
   cloud_firestore: ^6.0.2
+  sensors_plus: ^7.1.1
 
 dev_dependencies:
   flutter_test:

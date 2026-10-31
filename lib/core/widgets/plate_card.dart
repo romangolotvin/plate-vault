@@ -8,7 +8,9 @@ import '../../data/models/rarity.dart';
 import '../../data/models/trust_level.dart';
 import '../../data/rarity/rarity_engine.dart';
 import '../../data/series/plate_meaning.dart';
+import '../../data/series/series_catalog.dart';
 import '../../data/valuation/plate_valuation_engine.dart';
+import '../../features/encyclopedia/series_encyclopedia_screen.dart';
 import '../theme.dart';
 import 'plate_badge.dart';
 import 'vault_motion.dart';
@@ -200,7 +202,14 @@ class PlateCard extends StatelessWidget {
                   ],
                   if (meanings.isNotEmpty) ...[
                     const SizedBox(height: 8),
-                    MeaningChips(meanings: meanings, max: 3),
+                    MeaningChips(
+                      meanings: meanings,
+                      max: 3,
+                      onTapExplanation: (tag) {
+                        final key = _seriesKeyFromTag(tag);
+                        openSeriesEncyclopedia(context, seriesKey: key);
+                      },
+                    ),
                   ],
                   if (onFavorite != null || onShowcase != null) ...[
                     const SizedBox(height: 4),
@@ -255,6 +264,18 @@ class PlateCard extends StatelessWidget {
         Rarity.epic => VaultColors.epic,
         Rarity.legendary => VaultColors.legendary,
       };
+
+  String? _seriesKeyFromTag(PlateMeaningTag tag) {
+    final id = tag.id;
+    if (id.startsWith('series_')) {
+      return id.substring('series_'.length);
+    }
+    final known = RuCivilianSeriesCatalog.encyclopediaEntries();
+    for (final e in known) {
+      if (tag.labelRu.contains(e.seriesKey)) return e.seriesKey;
+    }
+    return null;
+  }
 
   String _raz(int n) {
     final mod10 = n % 10;

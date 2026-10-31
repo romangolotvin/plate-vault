@@ -5,6 +5,7 @@ import '../../app_state.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/plate_card.dart';
 import '../../core/widgets/vault_page.dart';
+import '../museum/museum_section.dart';
 
 class PublicScreen extends StatelessWidget {
   const PublicScreen({super.key});
@@ -60,6 +61,15 @@ class PublicScreen extends StatelessWidget {
                   },
                 ),
               ),
+            if (me != null) ...[
+              const SizedBox(height: 16),
+              MuseumSection(
+                items: state.collectionRepository.items,
+                title: 'Мой музей',
+                subtitle:
+                    'Публичная витрина: до 6 лучших Street. Отмечай «На витрину» в коллекции.',
+              ),
+            ],
             const SizedBox(height: 18),
             Text(
               'Профили',
