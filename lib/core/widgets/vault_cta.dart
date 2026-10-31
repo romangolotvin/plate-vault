@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
+import 'vault_anim.dart';
 
 /// Big expressive gradient CTA — not a default Material rectangle.
 class VaultCta extends StatelessWidget {
@@ -24,86 +25,87 @@ class VaultCta extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = onPressed != null && !busy;
-    final child = AnimatedOpacity(
+    final face = AnimatedContainer(
       duration: const Duration(milliseconds: 180),
-      opacity: enabled ? 1 : 0.45,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: enabled ? onPressed : null,
-          borderRadius: BorderRadius.circular(22),
-          child: Ink(
-            height: 60,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(22),
-              gradient: secondary
-                  ? null
-                  : const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
+      height: 60,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        gradient: secondary
+            ? null
+            : LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: enabled
+                    ? const [
                         Color(0xFFD4A0FF),
                         VaultColors.purple,
                         VaultColors.purpleDim,
+                      ]
+                    : [
+                        VaultColors.slate,
+                        VaultColors.panel,
                       ],
-                    ),
-              color: secondary ? VaultColors.slate.withValues(alpha: 0.85) : null,
-              border: Border.all(
-                color: secondary
-                    ? VaultColors.purple.withValues(alpha: 0.55)
-                    : VaultColors.purpleBright.withValues(alpha: 0.35),
-                width: secondary ? 1.4 : 1,
               ),
-              boxShadow: secondary
-                  ? null
-                  : [
-                      BoxShadow(
-                        color: VaultColors.purple.withValues(alpha: 0.45),
-                        blurRadius: 22,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-            ),
-            child: Center(
-              child: busy
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.4,
-                        color: VaultColors.cream,
-                      ),
-                    )
-                  : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (icon != null) ...[
-                          Icon(
-                            icon,
-                            color: secondary
-                                ? VaultColors.purpleBright
-                                : VaultColors.voidBg,
-                            size: 24,
-                          ),
-                          const SizedBox(width: 10),
-                        ],
-                        Text(
-                          label,
-                          style:
-                              Theme.of(context).textTheme.labelLarge?.copyWith(
-                                    fontSize: 16,
-                                    letterSpacing: 0.4,
-                                    color: secondary
-                                        ? VaultColors.cream
-                                        : VaultColors.voidBg,
-                                  ),
-                        ),
-                      ],
-                    ),
-            ),
-          ),
+        color: secondary ? VaultColors.slate.withValues(alpha: 0.85) : null,
+        border: Border.all(
+          color: secondary
+              ? VaultColors.purple.withValues(alpha: 0.55)
+              : VaultColors.purpleBright.withValues(alpha: 0.35),
+          width: secondary ? 1.4 : 1,
         ),
+        boxShadow: secondary || !enabled
+            ? null
+            : [
+                BoxShadow(
+                  color: VaultColors.purple.withValues(alpha: 0.45),
+                  blurRadius: 22,
+                  offset: const Offset(0, 10),
+                ),
+              ],
       ),
+      child: Center(
+        child: busy
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.4,
+                  color: VaultColors.cream,
+                ),
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (icon != null) ...[
+                    Icon(
+                      icon,
+                      color: secondary
+                          ? VaultColors.purpleBright
+                          : VaultColors.voidBg,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 10),
+                  ],
+                  Text(
+                    label,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          fontSize: 16,
+                          letterSpacing: 0.4,
+                          color: secondary
+                              ? VaultColors.cream
+                              : VaultColors.voidBg,
+                        ),
+                  ),
+                ],
+              ),
+      ),
+    );
+
+    final child = VaultPressable(
+      enabled: enabled,
+      onTap: enabled ? onPressed : null,
+      borderRadius: BorderRadius.circular(22),
+      child: face,
     );
 
     if (!expand) return child;

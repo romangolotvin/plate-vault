@@ -2,15 +2,16 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../app_state.dart';
 import '../../core/country_flag.dart';
+import '../../core/format_date.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/confirm_delete_dialog.dart';
 import '../../core/widgets/plate_card.dart';
 import '../../core/widgets/share_plate_card.dart';
+import '../../core/widgets/vault_anim.dart';
 import '../../core/widgets/vault_cta.dart';
 import '../../core/widgets/vault_page.dart';
 import '../../data/models/collection_item.dart';
@@ -26,7 +27,6 @@ class ProfileScreen extends StatelessWidget {
     this.isTab = false,
   });
 
-  /// If null, uses signed-in profile.
   final UserProfile? profile;
   final bool isTab;
 
@@ -37,16 +37,18 @@ class ProfileScreen extends StatelessWidget {
     final viewed = profile ?? me;
     if (viewed == null) {
       return const VaultPage(
-        body: Center(child: Text('Нет профиля')),
+        body: Center(
+          child: Text(
+            'Нет профиля',
+            style: TextStyle(color: VaultColors.cream),
+          ),
+        ),
       );
     }
     final isMe = me != null && me.uid == viewed.uid;
     final items = isMe
         ? state.collectionRepository.items
-        : state.publicFeed
-            .where((e) => e.userId == viewed.uid)
-            .toList();
-    final dateFmt = DateFormat.yMMMd('ru');
+        : state.publicFeed.where((e) => e.userId == viewed.uid).toList();
 
     return VaultPage(
       appBar: AppBar(
@@ -57,11 +59,7 @@ class ProfileScreen extends StatelessWidget {
             IconButton(
               tooltip: 'Настройки',
               onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const SettingsScreen(),
-                  ),
-                );
+                Navigator.of(context).push(vaultRoute(const SettingsScreen()));
               },
               icon: const Icon(Icons.settings_outlined,
                   color: VaultColors.purpleBright),
@@ -71,73 +69,87 @@ class ProfileScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
         children: [
-          _ProfileHeader(
-            profile: viewed,
-            editable: isMe,
+          VaultEnter(
+            child: _ProfileHeader(
+              profile: viewed,
+              editable: isMe,
+              plateCount: items.length,
+            ),
           ),
           const SizedBox(height: 18),
-          Text(
-            isMe ? 'Моя коллекция' : 'Коллекция',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: VaultColors.cream,
-                  fontWeight: FontWeight.w800,
-                ),
+          VaultEnter(
+            delay: const Duration(milliseconds: 60),
+            child: Text(
+              isMe ? 'Моя коллекция' : 'Коллекция',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: VaultColors.cream,
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
           ),
           const SizedBox(height: 4),
-          Text(
-            isMe
-                ? 'Все снятые номера. Плохой кадр — можно удалить.'
-                : 'Публичные номера этого коллекционера.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: VaultColors.mist,
-                ),
+          VaultEnter(
+            delay: const Duration(milliseconds: 90),
+            child: Text(
+              isMe
+                  ? 'Все снятые номера. Плохой кадр — можно удалить.'
+                  : 'Публичные номера этого коллекционера.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: VaultColors.mist,
+                  ),
+            ),
           ),
           const SizedBox(height: 12),
           if (items.isEmpty)
-            VaultHeroPanel(
-              child: Text(
-                isMe
-                    ? 'Коллекция пуста. Открой «Скан» и сними номер двумя ракурсами.'
-                    : 'Пока нет публичных номеров.',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: VaultColors.mist,
-                      height: 1.4,
-                    ),
+            VaultEnter(
+              delay: const Duration(milliseconds: 120),
+              child: VaultHeroPanel(
+                child: Text(
+                  isMe
+                      ? 'Коллекция пуста. Открой «Скан» и сними номер двумя ракурсами.'
+                      : 'Пока нет публичных номеров.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: VaultColors.mist,
+                        height: 1.4,
+                      ),
+                ),
               ),
             )
           else
-            ...items.map(
-              (item) => Padding(
+            ...List.generate(items.length, (index) {
+              final item = items[index];
+              return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: PlateCard(
-                  item: item,
-                  subtitle: dateFmt.format(item.createdAt),
-                  onTap: isMe
-                      ? () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => EditPlateScreen(existing: item),
-                            ),
-                          );
-                        }
-                      : null,
-                  onShare: () => showSharePlateCard(
-                    context,
+                child: VaultStagger(
+                  index: index,
+                  child: PlateCard(
                     item: item,
-                    currency: state.currency,
-                    seasonLabel: state.currentSeason.labelRu,
+                    subtitle: formatDateRu(item.createdAt),
+                    onTap: isMe
+                        ? () {
+                            Navigator.of(context).push(
+                              vaultRoute(EditPlateScreen(existing: item)),
+                            );
+                          }
+                        : null,
+                    onShare: () => showSharePlateCard(
+                      context,
+                      item: item,
+                      currency: state.currency,
+                      seasonLabel: state.currentSeason.labelRu,
+                    ),
+                    onDelete: isMe
+                        ? () => _deleteWithConfirm(context, state, item)
+                        : null,
+                    onFavorite:
+                        isMe ? () => state.toggleFavorite(item) : null,
+                    onShowcase:
+                        isMe ? () => state.toggleShowcase(item) : null,
                   ),
-                  onDelete: isMe
-                      ? () => _deleteWithConfirm(context, state, item)
-                      : null,
-                  onFavorite:
-                      isMe ? () => state.toggleFavorite(item) : null,
-                  onShowcase:
-                      isMe ? () => state.toggleShowcase(item) : null,
                 ),
-              ),
-            ),
+              );
+            }),
         ],
       ),
     );
@@ -162,10 +174,12 @@ class _ProfileHeader extends StatelessWidget {
   const _ProfileHeader({
     required this.profile,
     required this.editable,
+    required this.plateCount,
   });
 
   final UserProfile profile;
   final bool editable;
+  final int plateCount;
 
   @override
   Widget build(BuildContext context) {
@@ -182,7 +196,8 @@ class _ProfileHeader extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              GestureDetector(
+              VaultPressable(
+                enabled: editable,
                 onTap: editable ? () => _pickAvatar(context, state) : null,
                 child: Stack(
                   children: [
@@ -244,7 +259,8 @@ class _ProfileHeader extends StatelessWidget {
                           ),
                     ),
                     const SizedBox(height: 8),
-                    GestureDetector(
+                    VaultPressable(
+                      enabled: editable,
                       onTap: editable
                           ? () => _pickCountry(context, state, profile)
                           : null,
@@ -275,7 +291,7 @@ class _ProfileHeader extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '${profile.itemCount} номеров в коллекции',
+                      '$plateCount номеров в коллекции',
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                             color: VaultColors.magenta,
                           ),
@@ -288,8 +304,7 @@ class _ProfileHeader extends StatelessWidget {
           if (editable) ...[
             const SizedBox(height: 14),
             Text(
-              'Нажми на аватар, чтобы поставить фото из галереи. '
-              'Страну можно сменить рядом с флагом.',
+              'Нажми на аватар — фото из галереи. Страну смени рядом с флагом.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: VaultColors.mist.withValues(alpha: 0.9),
                     height: 1.35,

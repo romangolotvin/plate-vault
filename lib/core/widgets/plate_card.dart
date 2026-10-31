@@ -13,6 +13,7 @@ import '../../data/valuation/plate_valuation_engine.dart';
 import '../../features/encyclopedia/series_encyclopedia_screen.dart';
 import '../theme.dart';
 import 'plate_badge.dart';
+import 'vault_anim.dart';
 import 'vault_motion.dart';
 
 class PlateCard extends StatelessWidget {
@@ -59,40 +60,39 @@ class PlateCard extends StatelessWidget {
     final juicy = item.rarity.index >= Rarity.rare.index;
     final street = item.trust == TrustLevel.street;
 
-    return RarityPulse(
-      rarity: item.rarity,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
-          child: Ink(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  VaultColors.panel.withValues(alpha: 0.98),
-                  VaultColors.slate.withValues(alpha: 0.92),
-                  glow.withValues(alpha: juicy ? 0.16 : 0.08),
-                ],
-              ),
-              border: Border.all(
-                color: glow.withValues(alpha: juicy ? 0.55 : 0.35),
-                width: juicy ? 1.3 : 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: glow.withValues(alpha: juicy ? 0.28 : 0.14),
-                  blurRadius: juicy ? 26 : 18,
-                  offset: const Offset(0, 8),
-                ),
+    final card = Material(
+      color: Colors.transparent,
+      child: InkWell(
+        // Tap handled by VaultPressable (scale + haptic); keep splash only.
+        onTap: onTap == null ? null : () {},
+        borderRadius: BorderRadius.circular(20),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                VaultColors.panel.withValues(alpha: 0.98),
+                VaultColors.slate.withValues(alpha: 0.92),
+                glow.withValues(alpha: juicy ? 0.16 : 0.08),
               ],
             ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
-              child: Column(
+            border: Border.all(
+              color: glow.withValues(alpha: juicy ? 0.55 : 0.35),
+              width: juicy ? 1.3 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: glow.withValues(alpha: juicy ? 0.28 : 0.14),
+                blurRadius: juicy ? 26 : 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
+            child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Row(
@@ -260,10 +260,19 @@ class PlateCard extends StatelessWidget {
                     ),
                   ],
                 ],
-              ),
             ),
           ),
         ),
+      ),
+    );
+
+    return RarityPulse(
+      rarity: item.rarity,
+      child: VaultPressable(
+        enabled: onTap != null,
+        onTap: onTap,
+        scale: 0.97,
+        child: card,
       ),
     );
   }

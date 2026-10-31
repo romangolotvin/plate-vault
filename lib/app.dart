@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'app_state.dart';
 import 'core/theme.dart';
+import 'core/widgets/vault_anim.dart';
 import 'core/widgets/vault_scaffold.dart';
 import 'features/auth/auth_screen.dart';
 import 'features/collection/collection_screen.dart';
@@ -19,9 +21,32 @@ class PlateVaultApp extends StatelessWidget {
     return MaterialApp(
       title: 'Plate Vault',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.dark(),
+      theme: AppTheme.dark().copyWith(
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: {
+            TargetPlatform.android: _VaultPageTransitionsBuilder(),
+            TargetPlatform.iOS: _VaultPageTransitionsBuilder(),
+            TargetPlatform.windows: _VaultPageTransitionsBuilder(),
+          },
+        ),
+      ),
       home: const _RootGate(),
     );
+  }
+}
+
+class _VaultPageTransitionsBuilder extends PageTransitionsBuilder {
+  const _VaultPageTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return vaultSlideSwitch(child, animation);
   }
 }
 
@@ -72,8 +97,9 @@ class HomeShell extends StatefulWidget {
   State<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> {
+class _HomeShellState extends State<HomeShell> with TickerProviderStateMixin {
   int _index = 0;
+  late final AnimationController _tabMotion;
 
   static const _pages = [
     CollectionScreen(),
@@ -84,14 +110,51 @@ class _HomeShellState extends State<HomeShell> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _tabMotion = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 320),
+      value: 1,
+    );
+  }
+
+  @override
+  void dispose() {
+    _tabMotion.dispose();
+    super.dispose();
+  }
+
+  void _select(int i) {
+    if (i == _index) return;
+    HapticFeedback.selectionClick();
+    setState(() => _index = i);
+    _tabMotion
+      ..value = 0
+      ..animateTo(1, curve: Curves.easeOutCubic);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // No Opacity fade on tab switch — it was sticking at 0 and showing a blank
-    // (white-looking) screen on Витрина / other tabs.
     return VaultScaffold(
-      body: IndexedStack(index: _index, children: _pages),
+      body: AnimatedBuilder(
+        animation: _tabMotion,
+        builder: (context, _) {
+          // Slide + scale only — never fade the whole tab to 0.
+          final t = Curves.easeOutCubic.transform(_tabMotion.value);
+          return Transform.translate(
+            offset: Offset(0, (1 - t) * 10),
+            child: Transform.scale(
+              scale: 0.985 + 0.015 * t,
+              alignment: Alignment.topCenter,
+              child: IndexedStack(index: _index, children: _pages),
+            ),
+          );
+        },
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
+        onDestinationSelected: _select,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         height: 68,
         destinations: const [

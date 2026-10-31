@@ -320,13 +320,13 @@ class _ScanScreenState extends State<ScanScreen>
       body: AnimatedBuilder(
         animation: _enter,
         builder: (context, _) {
-          // Must read animation value *inside* the builder — otherwise opacity
-          // sticks at 0 after the first frame and the whole tab looks empty.
-          final t = Curves.easeOutCubic.transform(_enter.value);
-          return Opacity(
-            opacity: t.clamp(0.0, 1.0),
-            child: Transform.translate(
-              offset: Offset(0, (1 - t) * 18),
+          // Scale/slide only — never Opacity on the whole tab (blank/white bug).
+          final t = Curves.easeOutCubic.transform(_enter.value).clamp(0.0, 1.0);
+          return Transform.translate(
+            offset: Offset(0, (1 - t) * 14),
+            child: Transform.scale(
+              scale: 0.97 + 0.03 * t,
+              alignment: Alignment.topCenter,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                 child: Column(

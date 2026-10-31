@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../app_state.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/vault_anim.dart';
 import '../../core/widgets/vault_cta.dart';
 import '../../core/widgets/vault_page.dart';
 import '../../data/models/rarity.dart';
@@ -75,28 +76,45 @@ class CollectionScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
         children: [
-          _VitrinaWorthHeader(
-            streetCount: state.streetCount,
-            streetLabel: streetLabel,
-            seasonLabel: seasonLabel,
-            seasonName: state.currentSeason.labelRu,
+          VaultEnter(
+            child: _VitrinaWorthHeader(
+              streetCount: state.streetCount,
+              streetLabel: streetLabel,
+              seasonLabel: seasonLabel,
+              seasonName: state.currentSeason.labelRu,
+            ),
           ),
           const SizedBox(height: 12),
-          const PlayHubCard(),
+          const VaultEnter(
+            delay: Duration(milliseconds: 50),
+            child: PlayHubCard(),
+          ),
           const SizedBox(height: 12),
-          const DailyContractCard(),
+          const VaultEnter(
+            delay: Duration(milliseconds: 90),
+            child: DailyContractCard(),
+          ),
           const SizedBox(height: 12),
-          const SetsTeaserCard(),
+          const VaultEnter(
+            delay: Duration(milliseconds: 120),
+            child: SetsTeaserCard(),
+          ),
           const SizedBox(height: 12),
-          MuseumSection(
-            items: state.collectionRepository.items,
-            title: 'Витрина',
-            subtitle:
-                'До 6 лучших Street-номеров. Полная коллекция — во вкладке «Профиль».',
+          VaultEnter(
+            delay: const Duration(milliseconds: 150),
+            child: MuseumSection(
+              items: state.collectionRepository.items,
+              title: 'Витрина',
+              subtitle:
+                  'До 6 лучших Street-номеров. Полная коллекция — во вкладке «Профиль».',
+            ),
           ),
           if (state.collectionRepository.items.isEmpty) ...[
             const SizedBox(height: 16),
-            const _EmptyVitrina(),
+            const VaultEnter(
+              delay: Duration(milliseconds: 180),
+              child: _EmptyVitrina(),
+            ),
           ],
         ],
       ),

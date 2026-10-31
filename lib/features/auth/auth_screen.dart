@@ -67,11 +67,13 @@ class _AuthScreenState extends State<AuthScreen>
         child: AnimatedBuilder(
           animation: _enter,
           builder: (context, _) {
-            final t = Curves.easeOutCubic.transform(_enter.value);
-            return Opacity(
-              opacity: t.clamp(0.0, 1.0),
-              child: Transform.translate(
-                offset: Offset(0, (1 - t) * 28),
+            final t =
+                Curves.easeOutCubic.transform(_enter.value).clamp(0.0, 1.0);
+            return Transform.translate(
+              offset: Offset(0, (1 - t) * 20),
+              child: Transform.scale(
+                scale: 0.97 + 0.03 * t,
+                alignment: Alignment.topCenter,
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
                   children: [

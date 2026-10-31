@@ -1,7 +1,7 @@
 name: plate_vault
 description: Collect license plates from any country — scan, rate rarity, share.
 publish_to: "none"
-version: 1.8.0+12
+version: 1.8.1+13
 
 environment:
   sdk: ^3.13.7
