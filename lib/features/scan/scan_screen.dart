@@ -8,6 +8,7 @@ import '../../app_state.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/plate_badge.dart';
 import '../../core/widgets/vault_page.dart';
+import '../../data/models/trust_level.dart';
 import '../collection/edit_plate_screen.dart';
 
 class ScanScreen extends StatefulWidget {
@@ -26,13 +27,16 @@ class _ScanScreenState extends State<ScanScreen> {
   Future<void> _pick(ImageSource source) async {
     setState(() {
       _busy = true;
-      _status = 'Распознаём номер…';
+      _status = source == ImageSource.camera
+          ? 'Street-съёмка… распознаём номер'
+          : 'Галерея → Unverified · распознаём…';
     });
     try {
       final file = await _picker.pickImage(
         source: source,
         imageQuality: 92,
         maxWidth: 2000,
+        preferredCameraDevice: CameraDevice.rear,
       );
       if (file == null) {
         setState(() => _status = null);
@@ -49,11 +53,16 @@ class _ScanScreenState extends State<ScanScreen> {
       final ocr = await state.ocrService.recognizeRichFromFile(saved.path);
       if (!mounted) return;
 
+      final capture = source == ImageSource.camera
+          ? CaptureSource.liveCamera
+          : CaptureSource.gallery;
+      final trust = capture.defaultTrust;
+
       setState(() {
         _previewPath = saved.path;
         _status = ocr == null
-            ? 'Не удалось распознать — введите вручную'
-            : 'Распознано: ${ocr.text} · ${ocr.suggestedCountry}';
+            ? 'Не удалось распознать — введите вручную (${trust.shortRu})'
+            : 'Распознано: ${ocr.text} · ${ocr.suggestedCountry} · ${trust.shortRu}';
       });
 
       await Navigator.of(context).push(
@@ -62,6 +71,8 @@ class _ScanScreenState extends State<ScanScreen> {
             initialText: ocr?.text ?? '',
             initialCountry: ocr?.suggestedCountry ?? 'RU',
             photoPath: saved.path,
+            captureSource: capture,
+            trust: trust,
           ),
         ),
       );
@@ -84,7 +95,7 @@ class _ScanScreenState extends State<ScanScreen> {
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(22),
                 border: Border.all(
                   color: VaultColors.gold.withValues(alpha: 0.28),
                 ),
@@ -94,14 +105,14 @@ class _ScanScreenState extends State<ScanScreen> {
                   colors: [
                     VaultColors.slate,
                     VaultColors.panel.withValues(alpha: 0.85),
-                    VaultColors.teal.withValues(alpha: 0.12),
+                    VaultColors.teal.withValues(alpha: 0.14),
                   ],
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: VaultColors.teal.withValues(alpha: 0.12),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
+                    color: VaultColors.teal.withValues(alpha: 0.14),
+                    blurRadius: 22,
+                    offset: const Offset(0, 10),
                   ),
                 ],
               ),
@@ -109,7 +120,7 @@ class _ScanScreenState extends State<ScanScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Охота на номер',
+                    'Street capture',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: VaultColors.gold,
                           fontWeight: FontWeight.w800,
@@ -117,7 +128,8 @@ class _ScanScreenState extends State<ScanScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Сфотографируй госномер — OCR подставит текст, сейф сразу покажет серию, редкость и цену. Редкие и легендарные дают праздник при сохранении.',
+                    'Камера в приложении = Street (идёт в Street-лидерборд). '
+                    'Галерея и ручной ввод = Неквалифицированный — в коллекции, но без Street-очков.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: VaultColors.mist,
                           height: 1.35,
@@ -136,15 +148,31 @@ class _ScanScreenState extends State<ScanScreen> {
             FilledButton.icon(
               onPressed: _busy ? null : () => _pick(ImageSource.camera),
               icon: const Icon(Icons.photo_camera),
-              label: const Text('Камера'),
+              label: const Text('Камера · Street'),
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
               onPressed: _busy ? null : () => _pick(ImageSource.gallery),
               icon: const Icon(Icons.photo_library_outlined),
-              label: const Text('Галерея'),
+              label: const Text('Галерея · Unverified'),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: _busy
+                  ? null
+                  : () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const EditPlateScreen(
+                            captureSource: CaptureSource.manual,
+                            trust: TrustLevel.unverified,
+                          ),
+                        ),
+                      );
+                    },
+              child: const Text('Ввести вручную · Unverified'),
+            ),
+            const SizedBox(height: 16),
             if (_busy) const Center(child: CircularProgressIndicator()),
             if (_status != null) ...[
               const SizedBox(height: 12),
@@ -159,7 +187,7 @@ class _ScanScreenState extends State<ScanScreen> {
               const SizedBox(height: 16),
               Expanded(
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(18),
                   child: Image.file(
                     File(_previewPath!),
                     fit: BoxFit.contain,

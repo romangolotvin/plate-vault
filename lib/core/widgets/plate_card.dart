@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../app_state.dart';
 import '../../data/models/collection_item.dart';
 import '../../data/models/rarity.dart';
+import '../../data/models/trust_level.dart';
 import '../../data/rarity/rarity_engine.dart';
 import '../../data/series/plate_meaning.dart';
 import '../../data/valuation/plate_valuation_engine.dart';
@@ -19,6 +20,9 @@ class PlateCard extends StatelessWidget {
     this.subtitle,
     this.onTap,
     this.onDelete,
+    this.onFavorite,
+    this.onShowcase,
+    this.onShare,
     this.showMeanings = true,
   });
 
@@ -26,6 +30,9 @@ class PlateCard extends StatelessWidget {
   final String? subtitle;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
+  final VoidCallback? onFavorite;
+  final VoidCallback? onShowcase;
+  final VoidCallback? onShare;
   final bool showMeanings;
 
   @override
@@ -46,6 +53,7 @@ class PlateCard extends StatelessWidget {
 
     final glow = _rarityGlow(item.rarity);
     final juicy = item.rarity.index >= Rarity.rare.index;
+    final street = item.trust == TrustLevel.street;
 
     return RarityPulse(
       rarity: item.rarity,
@@ -53,10 +61,10 @@ class PlateCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(20),
           child: Ink(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(20),
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -95,6 +103,15 @@ class PlateCard extends StatelessWidget {
                           ),
                         ),
                       ),
+                      if (onShare != null)
+                        IconButton(
+                          tooltip: 'Share',
+                          onPressed: onShare,
+                          icon: Icon(
+                            Icons.ios_share,
+                            color: VaultColors.mist.withValues(alpha: 0.85),
+                          ),
+                        ),
                       if (onDelete != null)
                         IconButton(
                           tooltip: 'Удалить',
@@ -110,17 +127,32 @@ class PlateCard extends StatelessWidget {
                   Row(
                     children: [
                       RarityChip(rarity: item.rarity, dense: true),
+                      const SizedBox(width: 8),
+                      _MiniTrust(street: street),
+                      if (item.isFavorite)
+                        const Padding(
+                          padding: EdgeInsets.only(left: 6),
+                          child: Icon(Icons.star, size: 16, color: VaultColors.gold),
+                        ),
+                      if (item.isShowcase)
+                        const Padding(
+                          padding: EdgeInsets.only(left: 4),
+                          child: Icon(Icons.storefront,
+                              size: 16, color: VaultColors.teal),
+                        ),
                       const Spacer(),
                       if (item.isPublic)
                         Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: Text(
                             'публичный',
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: VaultColors.teal,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: VaultColors.teal,
+                                  fontWeight: FontWeight.w600,
+                                ),
                           ),
                         ),
                       if (subtitle != null)
@@ -128,8 +160,8 @@ class PlateCard extends StatelessWidget {
                           subtitle!,
                           style:
                               Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color:
-                                        VaultColors.mist.withValues(alpha: 0.7),
+                                    color: VaultColors.mist
+                                        .withValues(alpha: 0.7),
                                   ),
                         ),
                     ],
@@ -138,24 +170,64 @@ class PlateCard extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        'Оценка',
-                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                              color: VaultColors.mist.withValues(alpha: 0.8),
-                            ),
+                        street ? 'Street-оценка' : 'Оценка · Unverified',
+                        style:
+                            Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color:
+                                      VaultColors.mist.withValues(alpha: 0.8),
+                                ),
                       ),
                       const Spacer(),
                       Text(
                         valueLabel,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: VaultColors.gold,
-                              fontWeight: FontWeight.w800,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  color: VaultColors.gold,
+                                  fontWeight: FontWeight.w800,
+                                ),
                       ),
                     ],
                   ),
                   if (meanings.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     MeaningChips(meanings: meanings, max: 3),
+                  ],
+                  if (onFavorite != null || onShowcase != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        if (onFavorite != null)
+                          TextButton.icon(
+                            onPressed: onFavorite,
+                            icon: Icon(
+                              item.isFavorite
+                                  ? Icons.star
+                                  : Icons.star_border,
+                              size: 18,
+                              color: VaultColors.gold,
+                            ),
+                            label: Text(
+                              item.isFavorite ? 'В избранном' : 'В избранное',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        if (onShowcase != null)
+                          TextButton.icon(
+                            onPressed: onShowcase,
+                            icon: Icon(
+                              item.isShowcase
+                                  ? Icons.storefront
+                                  : Icons.storefront_outlined,
+                              size: 18,
+                              color: VaultColors.teal,
+                            ),
+                            label: Text(
+                              item.isShowcase ? 'Витрина' : 'На витрину',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                      ],
+                    ),
                   ],
                 ],
               ),
@@ -173,4 +245,31 @@ class PlateCard extends StatelessWidget {
         Rarity.epic => VaultColors.epic,
         Rarity.legendary => VaultColors.legendary,
       };
+}
+
+class _MiniTrust extends StatelessWidget {
+  const _MiniTrust({required this.street});
+
+  final bool street;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = street ? VaultColors.teal : VaultColors.mist;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        color: color.withValues(alpha: 0.14),
+        border: Border.all(color: color.withValues(alpha: 0.45)),
+      ),
+      child: Text(
+        street ? 'Street' : 'Unverified',
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
 }

@@ -1,68 +1,70 @@
 # Plate Vault
 
-Мобильное приложение (Android + iOS) для коллекции **госномеров** любых стран:
+Collector vault for **license plates** (Android + iOS): scan, rarity, folklore valuation, Street trust, dual leaderboards.
 
-- ручной ввод и OCR с камеры/галереи;
-- оценка редкости;
-- локальный аккаунт или Firebase Auth;
-- публичный показ коллекции;
-- проверка обновлений через GitHub Releases (с заделом под Play / App Store).
+## Trust model (anti-cheat)
 
-## Расположение на диске
+| Level | How you add | Portfolio flex | Street leaderboard |
+|-------|-------------|----------------|--------------------|
+| **Street** | Live in-app camera | Full | Counts |
+| **Unverified** | Manual / gallery | Marked / limited share flex | Does **not** count |
 
-Проект и toolchain рассчитаны на диск **E:** (на C: мало места):
+Two boards: **Street** (verified only) and **Неквалифицированный** (all plates). Local-first; Firestore when configured.
 
-| Что | Путь |
-|-----|------|
-| Проект | `E:\dev\plate-vault` |
-| Flutter SDK | `E:\dev\flutter` |
+## Valuation folklore (RUB hobby scale)
+
+- Common civilian ≈ low thousands
+- Mirrors + Caucasus / province ≈ **~70k** (Tier 1)
+- **МЕР + 777 + MSK/SPB** = top tier (hundreds of thousands → millions), **not** ~70k
+- In-app **price breakdown** (series · digits · region · combo)
+
+## In-app OTA (Android)
+
+**Настройки → Проверить обновления** → download with progress → FileProvider install.  
+Needs `REQUEST_INSTALL_PACKAGES`. No browser.
+
+## Paths (E: toolchain)
+
+| What | Path |
+|------|------|
+| Project | `E:\dev\plate-vault` |
+| Flutter | `E:\dev\flutter` |
 | Pub cache | `E:\dev\pub-cache` |
+| Gradle | `E:\dev\gradle` |
+| Release APK | `E:\dev\builds\plate-vault-release.apk` |
 
 ```powershell
 $env:Path = "E:\dev\flutter\bin;$env:Path"
 $env:PUB_CACHE = "E:\dev\pub-cache"
+$env:GRADLE_USER_HOME = "E:\dev\gradle"
 cd E:\dev\plate-vault
 flutter pub get
-flutter run
+flutter test
+flutter build apk --release
 ```
 
-## Идентификаторы для магазинов
+## IDs
 
-- Android: `com.platevault.app`
-- iOS: `com.platevault.app`
+- Android / iOS: `com.platevault.app`
+- GitHub: `romangolotvin/plate-vault`
 
-Чеклист публикации: [docs/STORE.md](docs/STORE.md).
+## Firebase (optional)
 
-## Firebase (опционально)
+Placeholder keys in `lib/firebase_options.dart` → offline / local leaderboards.  
+Configure with FlutterFire when ready; rules in `firebase/firestore.rules`.
 
-Пока ключи-плейсхолдеры в `lib/firebase_options.dart` — приложение работает **офлайн**.
-
-```powershell
-dart pub global activate flutterfire_cli
-flutterfire configure
-```
-
-Затем задеплойте правила из `firebase/firestore.rules`.
-
-## Автообновление
-
-1. Создайте GitHub-репозиторий и пропишите `githubOwner` / `githubRepo` в `lib/core/constants.dart`.
-2. Соберите APK / создайте Release (workflow: `.github/workflows/android-release.yml`).
-3. В приложении: **Настройки → Проверить обновления**.
-4. После публикации в магазинах переключитесь на `StoreUpdateService` (см. STORE.md).
-
-## Структура
+## Structure
 
 ```
 lib/
-  core/           theme, constants, update, LicensePlateView
+  core/           theme, OTA, plate widgets, share card, motion
   data/
-    plates/       country specs (format + visual + OCR)
-    series/       cool / status series meanings
-    valuation/    collector estimate + currency
-    rarity/, ocr/, models/, repositories/
-  features/       auth, collection, scan, public, settings
+    models/       CollectionItem + TrustLevel
+    leaderboard/  Street + Unverified boards
+    plates/       country visuals / OCR formats
+    series/       RU folklore + CIS stubs
+    valuation/    collector estimate
+  features/       collection, scan, leaderboard, public, settings
 ```
 
-Font approximations: [docs/PLATE_FONTS.md](docs/PLATE_FONTS.md).
-Valuation base is RUB; fixed rates `$1 = 92 ₽`, `€1 = 100 ₽`.
+See also: [docs/PLATE_FONTS.md](docs/PLATE_FONTS.md), [docs/STORE.md](docs/STORE.md).

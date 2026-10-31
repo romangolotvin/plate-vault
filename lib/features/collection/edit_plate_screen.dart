@@ -8,6 +8,7 @@ import '../../core/widgets/vault_motion.dart';
 import '../../core/widgets/vault_scaffold.dart';
 import '../../data/models/collection_item.dart';
 import '../../data/models/rarity.dart';
+import '../../data/models/trust_level.dart';
 import '../../data/plates/plate_registry.dart';
 import '../../data/rarity/rarity_engine.dart';
 import '../../data/valuation/plate_valuation_engine.dart';
@@ -19,12 +20,16 @@ class EditPlateScreen extends StatefulWidget {
     this.initialText,
     this.initialCountry,
     this.photoPath,
+    this.captureSource = CaptureSource.manual,
+    this.trust = TrustLevel.unverified,
   });
 
   final CollectionItem? existing;
   final String? initialText;
   final String? initialCountry;
   final String? photoPath;
+  final CaptureSource captureSource;
+  final TrustLevel trust;
 
   @override
   State<EditPlateScreen> createState() => _EditPlateScreenState();
@@ -46,6 +51,14 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
   final _engine = RarityEngine.instance;
   bool _saving = false;
 
+  CaptureSource get _source =>
+      widget.existing?.captureSource ?? widget.captureSource;
+
+  TrustLevel get _trust {
+    if (widget.existing != null) return widget.existing!.trust;
+    return _source.qualifiesStreet ? widget.trust : TrustLevel.unverified;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -53,9 +66,8 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
       text: widget.existing?.rawText ?? widget.initialText ?? '',
     );
     _notesCtrl = TextEditingController(text: widget.existing?.notes ?? '');
-    _country = widget.existing?.countryCode ??
-        widget.initialCountry ??
-        'RU';
+    _country =
+        widget.existing?.countryCode ?? widget.initialCountry ?? 'RU';
   }
 
   @override
@@ -84,6 +96,13 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
     final editing = widget.existing != null;
     final shine =
         preview.rarity.index >= Rarity.rare.index && _textCtrl.text.isNotEmpty;
+    final dup = _textCtrl.text.trim().isEmpty
+        ? null
+        : state.findDuplicate(
+            countryCode: _country,
+            rawText: _textCtrl.text,
+            excludeId: widget.existing?.id,
+          );
 
     return VaultScaffold(
       appBar: AppBar(
@@ -97,7 +116,7 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
             child: Container(
               padding: const EdgeInsets.fromLTRB(14, 16, 14, 18),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(22),
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
@@ -157,11 +176,15 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
                     children: [
                       RarityChip(rarity: preview.rarity),
                       const SizedBox(width: 10),
+                      _TrustChip(trust: _trust),
+                      const SizedBox(width: 10),
                       Text(
                         'score ${preview.score}',
-                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                              color: VaultColors.mist.withValues(alpha: 0.85),
-                            ),
+                        style:
+                            Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color:
+                                      VaultColors.mist.withValues(alpha: 0.85),
+                                ),
                       ),
                     ],
                   ),
@@ -169,6 +192,32 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          Text(
+            _trust.hintRu,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: VaultColors.mist,
+                ),
+          ),
+          if (dup != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                color: VaultColors.epic.withValues(alpha: 0.12),
+                border: Border.all(
+                  color: VaultColors.epic.withValues(alpha: 0.45),
+                ),
+              ),
+              child: Text(
+                'Дубликат: такой номер уже в сейфе (${dup.rawText}). Можно сохранить ещё раз — достижение «Двойник» откроется.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: VaultColors.cream,
+                    ),
+              ),
+            ),
+          ],
           const SizedBox(height: 18),
           TextField(
             controller: _textCtrl,
@@ -259,6 +308,8 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
           notes: _notesCtrl.text.trim().isEmpty
               ? null
               : _notesCtrl.text.trim(),
+          trust: _trust,
+          captureSource: _source,
         );
       }
       if (!mounted) return;
@@ -280,5 +331,33 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+}
+
+class _TrustChip extends StatelessWidget {
+  const _TrustChip({required this.trust});
+
+  final TrustLevel trust;
+
+  @override
+  Widget build(BuildContext context) {
+    final street = trust == TrustLevel.street;
+    final color = street ? VaultColors.teal : VaultColors.mist;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        color: color.withValues(alpha: 0.16),
+        border: Border.all(color: color.withValues(alpha: 0.55)),
+      ),
+      child: Text(
+        trust.shortRu,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w800,
+          fontSize: 12,
+        ),
+      ),
+    );
   }
 }

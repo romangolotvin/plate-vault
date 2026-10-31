@@ -1,5 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:plate_vault/data/leaderboard/leaderboard_service.dart';
+import 'package:plate_vault/data/models/collection_item.dart';
 import 'package:plate_vault/data/models/rarity.dart';
+import 'package:plate_vault/data/models/trust_level.dart';
 import 'package:plate_vault/data/plates/plate_registry.dart';
 import 'package:plate_vault/data/rarity/rarity_engine.dart';
 import 'package:plate_vault/data/series/plate_meaning.dart';
@@ -213,5 +216,69 @@ void main() {
 
   test('UK alias resolves to GB', () {
     expect(registry.resolve('UK').code, 'GB');
+  });
+
+  test('expanded folklore series СКР / ХАН resolve', () {
+    // С001КР77 → series key СКР (civilian alphabet only).
+    final skr = engine.evaluate(
+      countryCode: 'RU',
+      rawText: '\u0421001\u041A\u042077',
+    );
+    expect(skr.meanings.any((m) => m.labelRu.contains('\u0421\u041A\u0420')), isTrue);
+
+    final han = engine.evaluate(
+      countryCode: 'RU',
+      rawText: '\u0425001\u0410\u041D77',
+    );
+    expect(han.meanings.any((m) => m.labelRu.contains('\u0425\u0410\u041D')), isTrue);
+  });
+
+  test('capture source maps to Street vs Unverified', () {
+    expect(CaptureSource.liveCamera.qualifiesStreet, isTrue);
+    expect(CaptureSource.liveCamera.defaultTrust, TrustLevel.street);
+    expect(CaptureSource.gallery.qualifiesStreet, isFalse);
+    expect(CaptureSource.manual.defaultTrust, TrustLevel.unverified);
+  });
+
+  test('Street board ignores Unverified plates', () {
+    final lb = LeaderboardService();
+    final street = CollectionItem(
+      id: '1',
+      userId: 'u',
+      type: CollectionType.licensePlate,
+      countryCode: 'RU',
+      rawText: merPlateTyped,
+      normalizedText: engine.normalize(merPlateTyped),
+      rarity: Rarity.legendary,
+      rarityReason: 't',
+      createdAt: DateTime.now(),
+      trust: TrustLevel.street,
+      captureSource: CaptureSource.liveCamera,
+    );
+    final manual = CollectionItem(
+      id: '2',
+      userId: 'u',
+      type: CollectionType.licensePlate,
+      countryCode: 'RU',
+      rawText: merPlateTyped,
+      normalizedText: engine.normalize(merPlateTyped),
+      rarity: Rarity.legendary,
+      rarityReason: 't',
+      createdAt: DateTime.now(),
+      trust: TrustLevel.unverified,
+      captureSource: CaptureSource.manual,
+    );
+    final streetWorth = lb.portfolioWorth(
+      [street, manual],
+      kind: LeaderboardKind.street,
+    );
+    final allWorth = lb.portfolioWorth(
+      [street, manual],
+      kind: LeaderboardKind.unverified,
+    );
+    expect(streetWorth, greaterThan(0));
+    expect(allWorth, closeTo(streetWorth * 2, 1));
+    expect(lb.plateCount([street, manual], kind: LeaderboardKind.street), 1);
+    expect(lb.plateCount([street, manual], kind: LeaderboardKind.unverified), 2);
   });
 }

@@ -82,12 +82,23 @@ TextStyle _plateTypeface(
     letterSpacing: letterSpacing,
     height: 1.0,
   );
+  // Extra-black / condensed stacks read closer to thick ГОСТ metal glyphs.
   return switch (key) {
-    PlateFontKey.ruGostApprox => GoogleFonts.robotoCondensed(textStyle: base),
-    PlateFontKey.deFeApprox => GoogleFonts.robotoCondensed(textStyle: base),
-    PlateFontKey.ukCharlesApprox => GoogleFonts.oswald(textStyle: base),
-    PlateFontKey.dinApprox => GoogleFonts.robotoCondensed(textStyle: base),
-    PlateFontKey.usBlock => GoogleFonts.oswald(textStyle: base),
+    PlateFontKey.ruGostApprox => GoogleFonts.robotoCondensed(
+        textStyle: base.copyWith(fontWeight: FontWeight.w900),
+      ),
+    PlateFontKey.deFeApprox => GoogleFonts.robotoCondensed(
+        textStyle: base.copyWith(fontWeight: FontWeight.w800),
+      ),
+    PlateFontKey.ukCharlesApprox => GoogleFonts.oswald(
+        textStyle: base.copyWith(fontWeight: FontWeight.w700),
+      ),
+    PlateFontKey.dinApprox => GoogleFonts.robotoCondensed(
+        textStyle: base.copyWith(fontWeight: FontWeight.w800),
+      ),
+    PlateFontKey.usBlock => GoogleFonts.oswald(
+        textStyle: base.copyWith(fontWeight: FontWeight.w700),
+      ),
   };
 }
 
@@ -166,12 +177,12 @@ class _RuGostPlate extends StatelessWidget {
                                 visual.fontKey,
                                 color: visual.inkColor,
                                 size: mainSize,
-                                weight: FontWeight.w700,
-                                letterSpacing: 0,
+                                weight: FontWeight.w900,
+                                letterSpacing: -0.5,
                               ),
                             ),
                           ),
-                          SizedBox(width: gap),
+                          SizedBox(width: gap * 0.7),
                           Expanded(
                             flex: 28,
                             child: _FitGlyph(
@@ -180,12 +191,12 @@ class _RuGostPlate extends StatelessWidget {
                                 visual.fontKey,
                                 color: visual.inkColor,
                                 size: mainSize,
-                                weight: FontWeight.w700,
-                                letterSpacing: height * 0.02,
+                                weight: FontWeight.w900,
+                                letterSpacing: height * 0.01,
                               ),
                             ),
                           ),
-                          SizedBox(width: gap),
+                          SizedBox(width: gap * 0.7),
                           Expanded(
                             flex: 18,
                             child: _FitGlyph(
@@ -194,8 +205,8 @@ class _RuGostPlate extends StatelessWidget {
                                 visual.fontKey,
                                 color: visual.inkColor,
                                 size: mainSize,
-                                weight: FontWeight.w700,
-                                letterSpacing: height * 0.015,
+                                weight: FontWeight.w900,
+                                letterSpacing: height * 0.008,
                               ),
                             ),
                           ),

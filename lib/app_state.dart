@@ -5,8 +5,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'core/update/update_service.dart';
+import 'data/achievements/achievements.dart';
+import 'data/leaderboard/leaderboard_service.dart';
 import 'data/models/collection_item.dart';
 import 'data/models/rarity.dart';
+import 'data/models/trust_level.dart';
 import 'data/models/user_profile.dart';
 import 'data/ocr/plate_ocr_service.dart';
 import 'data/repositories/auth_repository.dart';
@@ -16,7 +19,9 @@ import 'data/valuation/currency.dart';
 import 'data/valuation/plate_valuation_engine.dart';
 import 'firebase_options.dart';
 
-enum CollectionSort { newest, valueDesc, rarityDesc }
+enum CollectionSort { newest, valueDesc, rarityDesc, streetFirst }
+
+enum TrustFilter { all, street, unverified }
 
 class AppState extends ChangeNotifier {
   AppState({UpdateService? updateService})
@@ -25,9 +30,11 @@ class AppState extends ChangeNotifier {
   final UpdateService updateService;
   final LocalStore localStore = LocalStore();
   final PlateOcrService ocrService = PlateOcrService();
+  final AchievementsEngine achievementsEngine = const AchievementsEngine();
 
   late AuthRepository authRepository;
   late CollectionRepository collectionRepository;
+  late LeaderboardService leaderboardService;
 
   bool ready = false;
   bool cloudEnabled = false;
@@ -39,18 +46,35 @@ class AppState extends ChangeNotifier {
   Rarity? rarityFilter;
   String searchQuery = '';
   CollectionSort sort = CollectionSort.newest;
+  TrustFilter trustFilter = TrustFilter.all;
+  bool favoritesOnly = false;
+  bool showcaseOnly = false;
 
   List<CollectionItem> publicFeed = [];
   List<UserProfile> publicProfiles = [];
+  List<LeaderboardEntry> streetBoard = [];
+  List<LeaderboardEntry> unverifiedBoard = [];
 
   UserProfile? get profile => authRepository.currentProfile;
   bool get isSignedIn => profile != null;
+
   List<CollectionItem> get myItems {
-    final items = collectionRepository.filtered(
+    var items = collectionRepository.filtered(
       country: countryFilter,
       rarity: rarityFilter,
       query: searchQuery,
     );
+    if (trustFilter == TrustFilter.street) {
+      items = items.where((e) => e.isStreet).toList();
+    } else if (trustFilter == TrustFilter.unverified) {
+      items = items.where((e) => !e.isStreet).toList();
+    }
+    if (favoritesOnly) {
+      items = items.where((e) => e.isFavorite).toList();
+    }
+    if (showcaseOnly) {
+      items = items.where((e) => e.isShowcase).toList();
+    }
     return _sorted(items);
   }
 
@@ -75,19 +99,32 @@ class AppState extends ChangeNotifier {
           final c = b.rarity.index.compareTo(a.rarity.index);
           return c != 0 ? c : b.createdAt.compareTo(a.createdAt);
         });
+      case CollectionSort.streetFirst:
+        copy.sort((a, b) {
+          final c = (b.isStreet ? 1 : 0).compareTo(a.isStreet ? 1 : 0);
+          return c != 0 ? c : b.createdAt.compareTo(a.createdAt);
+        });
     }
     return copy;
   }
 
-  double get collectionWorthRub {
-    var sum = 0.0;
-    for (final item in collectionRepository.items) {
-      sum += PlateValuationEngine.instance
-          .estimate(countryCode: item.countryCode, rawText: item.rawText)
-          .amountRub;
-    }
-    return sum;
-  }
+  double get collectionWorthRub => leaderboardService.portfolioWorth(
+        collectionRepository.items,
+        kind: LeaderboardKind.unverified,
+      );
+
+  double get streetWorthRub => leaderboardService.portfolioWorth(
+        collectionRepository.items,
+        kind: LeaderboardKind.street,
+      );
+
+  int get streetCount => leaderboardService.plateCount(
+        collectionRepository.items,
+        kind: LeaderboardKind.street,
+      );
+
+  List<Achievement> get achievements =>
+      achievementsEngine.evaluate(collectionRepository.items);
 
   Future<void> init() async {
     try {
@@ -103,20 +140,26 @@ class AppState extends ChangeNotifier {
         firestore: cloudEnabled ? FirebaseFirestore.instance : null,
         cloudEnabled: cloudEnabled,
       );
+      leaderboardService = LeaderboardService(
+        firestore: cloudEnabled ? FirebaseFirestore.instance : null,
+        cloudEnabled: cloudEnabled,
+      );
       await collectionRepository.load();
       await authRepository.restoreSession();
       currency = await localStore.loadCurrency();
       await refreshPublic();
+      await refreshLeaderboards();
     } catch (e, st) {
       bootError = '$e';
       debugPrint('AppState.init failed: $e\n$st');
-      // Ensure local mode still works.
       authRepository = AuthRepository(localStore: localStore);
       collectionRepository = CollectionRepository(localStore: localStore);
+      leaderboardService = LeaderboardService();
       await collectionRepository.load();
       await authRepository.restoreSession();
       currency = await localStore.loadCurrency();
       cloudEnabled = false;
+      await refreshLeaderboards();
     } finally {
       ready = true;
       notifyListeners();
@@ -146,6 +189,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> signInLocal(String displayName) async {
     await authRepository.signInLocal(displayName: displayName);
+    await refreshLeaderboards();
     notifyListeners();
   }
 
@@ -159,6 +203,7 @@ class AppState extends ChangeNotifier {
       password: password,
       displayName: displayName,
     );
+    await refreshLeaderboards();
     notifyListeners();
   }
 
@@ -167,6 +212,7 @@ class AppState extends ChangeNotifier {
     required String password,
   }) async {
     await authRepository.signInEmail(email: email, password: password);
+    await refreshLeaderboards();
     notifyListeners();
   }
 
@@ -177,7 +223,6 @@ class AppState extends ChangeNotifier {
 
   Future<void> updateProfile(UserProfile profile) async {
     await authRepository.updateProfile(profile);
-    // Mirror public flag onto items when enabling.
     if (profile.publicCollectionEnabled) {
       for (final item in collectionRepository.items) {
         if (!item.isPublic) {
@@ -190,6 +235,7 @@ class AppState extends ChangeNotifier {
       }
     }
     await refreshPublic();
+    await refreshLeaderboards();
     notifyListeners();
   }
 
@@ -199,6 +245,8 @@ class AppState extends ChangeNotifier {
     String? photoPath,
     String? notes,
     bool? isPublic,
+    TrustLevel trust = TrustLevel.unverified,
+    CaptureSource captureSource = CaptureSource.manual,
   }) async {
     final user = profile!;
     final item = await collectionRepository.addPlate(
@@ -208,17 +256,41 @@ class AppState extends ChangeNotifier {
       photoPath: photoPath,
       notes: notes,
       isPublic: isPublic ?? user.publicCollectionEnabled,
+      trust: trust,
+      captureSource: captureSource,
     );
     await authRepository.updateProfile(
       user.copyWith(itemCount: collectionRepository.items.length),
     );
+    await refreshLeaderboards();
     notifyListeners();
     return item;
   }
 
+  CollectionItem? findDuplicate({
+    required String countryCode,
+    required String rawText,
+    String? excludeId,
+  }) {
+    return collectionRepository.findDuplicate(
+      countryCode: countryCode,
+      rawText: rawText,
+      excludeId: excludeId,
+    );
+  }
+
   Future<void> updatePlate(CollectionItem item) async {
     await collectionRepository.updateItem(item);
+    await refreshLeaderboards();
     notifyListeners();
+  }
+
+  Future<void> toggleFavorite(CollectionItem item) async {
+    await updatePlate(item.copyWith(isFavorite: !item.isFavorite));
+  }
+
+  Future<void> toggleShowcase(CollectionItem item) async {
+    await updatePlate(item.copyWith(isShowcase: !item.isShowcase));
   }
 
   Future<void> deletePlate(String id) async {
@@ -227,6 +299,7 @@ class AppState extends ChangeNotifier {
     await authRepository.updateProfile(
       user.copyWith(itemCount: collectionRepository.items.length),
     );
+    await refreshLeaderboards();
     notifyListeners();
   }
 
@@ -235,6 +308,9 @@ class AppState extends ChangeNotifier {
     Rarity? rarity,
     String? query,
     CollectionSort? sortBy,
+    TrustFilter? trust,
+    bool? favOnly,
+    bool? showOnly,
     bool clearRarity = false,
   }) {
     if (country != null) countryFilter = country;
@@ -245,12 +321,46 @@ class AppState extends ChangeNotifier {
     }
     if (query != null) searchQuery = query;
     if (sortBy != null) sort = sortBy;
+    if (trust != null) trustFilter = trust;
+    if (favOnly != null) favoritesOnly = favOnly;
+    if (showOnly != null) showcaseOnly = showOnly;
     notifyListeners();
   }
 
   Future<void> refreshPublic() async {
     publicFeed = await collectionRepository.fetchPublicFeed();
     publicProfiles = await authRepository.fetchPublicProfiles();
+    notifyListeners();
+  }
+
+  Future<void> refreshLeaderboards() async {
+    final me = profile;
+    final mine = collectionRepository.items;
+    final visible = [
+      ...publicFeed,
+      if (me != null) ...mine.where((e) => e.isPublic || true),
+    ];
+    // Dedupe by id
+    final byId = <String, CollectionItem>{
+      for (final i in visible) i.id: i,
+    };
+    streetBoard = await leaderboardService.build(
+      kind: LeaderboardKind.street,
+      profiles: publicProfiles,
+      allVisibleItems: byId.values.toList(),
+      me: me,
+      myItems: mine,
+    );
+    unverifiedBoard = await leaderboardService.build(
+      kind: LeaderboardKind.unverified,
+      profiles: publicProfiles,
+      allVisibleItems: byId.values.toList(),
+      me: me,
+      myItems: mine,
+    );
+    if (me != null) {
+      await leaderboardService.publishMine(me: me, myItems: mine);
+    }
     notifyListeners();
   }
 

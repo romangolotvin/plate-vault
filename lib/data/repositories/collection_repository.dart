@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../models/collection_item.dart';
 import '../models/rarity.dart';
+import '../models/trust_level.dart';
 import '../rarity/rarity_engine.dart';
 import 'local_store.dart';
 
@@ -39,6 +40,10 @@ class CollectionRepository {
     String? notes,
     bool isPublic = false,
     List<String> tags = const [],
+    TrustLevel trust = TrustLevel.unverified,
+    CaptureSource captureSource = CaptureSource.manual,
+    bool isFavorite = false,
+    bool isShowcase = false,
   }) async {
     final normalized = _rarity.normalize(rawText);
     final result = _rarity.evaluate(
@@ -50,6 +55,10 @@ class CollectionRepository {
       ...tags,
       ...meaningTags,
     }.toList(growable: false);
+    // Street only via live camera; gallery/manual forced Unverified.
+    final effectiveTrust = captureSource.qualifiesStreet
+        ? trust
+        : TrustLevel.unverified;
     final item = CollectionItem(
       id: _uuid.v4(),
       userId: userId,
@@ -64,10 +73,31 @@ class CollectionRepository {
       photoPath: photoPath,
       isPublic: isPublic,
       notes: notes,
+      trust: effectiveTrust,
+      captureSource: captureSource,
+      isFavorite: isFavorite,
+      isShowcase: isShowcase,
     );
     _cache = [item, ..._cache];
     await _persist(userId);
     return item;
+  }
+
+  /// Duplicate = same country + normalized text (already in vault).
+  CollectionItem? findDuplicate({
+    required String countryCode,
+    required String rawText,
+    String? excludeId,
+  }) {
+    final norm = _rarity.normalize(rawText);
+    final cc = countryCode.toUpperCase();
+    for (final item in _cache) {
+      if (excludeId != null && item.id == excludeId) continue;
+      if (item.countryCode == cc && item.normalizedText == norm) {
+        return item;
+      }
+    }
+    return null;
   }
 
   Future<CollectionItem> updateItem(CollectionItem item) async {

@@ -5,8 +5,10 @@ import 'package:provider/provider.dart';
 import '../../app_state.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/plate_card.dart';
+import '../../core/widgets/share_plate_card.dart';
 import '../../core/widgets/vault_page.dart';
 import '../../data/models/rarity.dart';
+import '../../data/models/trust_level.dart';
 import '../../data/valuation/plate_valuation_engine.dart';
 import 'edit_plate_screen.dart';
 
@@ -27,17 +29,40 @@ class CollectionScreen extends StatelessWidget {
       ),
       state.currency,
     );
+    final streetLabel = PlateValuationEngine.instance.formatDetailed(
+      PlateValuation(
+        amountRub: state.streetWorthRub,
+        rarityScore: 0,
+        rarity: Rarity.common,
+        rationale: '',
+      ),
+      state.currency,
+    );
+    final unlocked = state.achievements.where((a) => a.unlocked).length;
 
     return VaultPage(
       appBar: AppBar(
         title: const Text('Моя коллекция'),
         actions: [
           IconButton(
+            tooltip: 'Достижения',
+            onPressed: () => _showAchievements(context, state),
+            icon: Badge(
+              isLabelVisible: unlocked > 0,
+              label: Text('$unlocked'),
+              child: const Icon(Icons.military_tech_outlined,
+                  color: VaultColors.gold),
+            ),
+          ),
+          IconButton(
             tooltip: 'Добавить вручную',
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => const EditPlateScreen(),
+                  builder: (_) => const EditPlateScreen(
+                    captureSource: CaptureSource.manual,
+                    trust: TrustLevel.unverified,
+                  ),
                 ),
               );
             },
@@ -51,7 +76,9 @@ class CollectionScreen extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
             child: _VaultWorthHeader(
               count: state.collectionRepository.items.length,
+              streetCount: state.streetCount,
               totalLabel: totalLabel,
+              streetLabel: streetLabel,
             ),
           ),
           Padding(
@@ -84,10 +111,45 @@ class CollectionScreen extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 _SortChip(
-                  label: 'По редкости',
+                  label: 'Street↑',
+                  selected: state.sort == CollectionSort.streetFirst,
+                  onTap: () =>
+                      state.setFilters(sortBy: CollectionSort.streetFirst),
+                ),
+                const SizedBox(width: 8),
+                _SortChip(
+                  label: 'Редкость',
                   selected: state.sort == CollectionSort.rarityDesc,
                   onTap: () =>
                       state.setFilters(sortBy: CollectionSort.rarityDesc),
+                ),
+                const SizedBox(width: 8),
+                FilterChip(
+                  selected: state.trustFilter == TrustFilter.street,
+                  label: const Text('Street'),
+                  onSelected: (v) => state.setFilters(
+                    trust: v ? TrustFilter.street : TrustFilter.all,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilterChip(
+                  selected: state.trustFilter == TrustFilter.unverified,
+                  label: const Text('Unverified'),
+                  onSelected: (v) => state.setFilters(
+                    trust: v ? TrustFilter.unverified : TrustFilter.all,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilterChip(
+                  selected: state.favoritesOnly,
+                  label: const Text('★'),
+                  onSelected: (v) => state.setFilters(favOnly: v),
+                ),
+                const SizedBox(width: 8),
+                FilterChip(
+                  selected: state.showcaseOnly,
+                  label: const Text('Витрина'),
+                  onSelected: (v) => state.setFilters(showOnly: v),
                 ),
                 const SizedBox(width: 8),
                 FilterChip(
@@ -123,17 +185,22 @@ class CollectionScreen extends StatelessWidget {
             child: items.isEmpty
                 ? _EmptyVault(
                     onScan: () {
-                      // Jump via root navigator to scan is awkward; open edit or hint.
                       Navigator.of(context).push(
                         MaterialPageRoute<void>(
-                          builder: (_) => const EditPlateScreen(),
+                          builder: (_) => const EditPlateScreen(
+                            captureSource: CaptureSource.manual,
+                            trust: TrustLevel.unverified,
+                          ),
                         ),
                       );
                     },
                     onManual: () {
                       Navigator.of(context).push(
                         MaterialPageRoute<void>(
-                          builder: (_) => const EditPlateScreen(),
+                          builder: (_) => const EditPlateScreen(
+                            captureSource: CaptureSource.manual,
+                            trust: TrustLevel.unverified,
+                          ),
                         ),
                       );
                     },
@@ -144,24 +211,78 @@ class CollectionScreen extends StatelessWidget {
                     separatorBuilder: (_, __) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
                       final item = items[index];
-                      return PlateCard(
-                        item: item,
-                        subtitle: dateFmt.format(item.createdAt),
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) =>
-                                  EditPlateScreen(existing: item),
-                            ),
-                          );
-                        },
-                        onDelete: () => state.deletePlate(item.id),
+                      return TweenAnimationBuilder<double>(
+                        key: ValueKey(item.id),
+                        tween: Tween(begin: 0.94, end: 1),
+                        duration: Duration(milliseconds: 280 + (index % 5) * 40),
+                        curve: Curves.easeOutBack,
+                        builder: (context, scale, child) =>
+                            Transform.scale(scale: scale, child: child),
+                        child: PlateCard(
+                          item: item,
+                          subtitle: dateFmt.format(item.createdAt),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) =>
+                                    EditPlateScreen(existing: item),
+                              ),
+                            );
+                          },
+                          onDelete: () => state.deletePlate(item.id),
+                          onFavorite: () => state.toggleFavorite(item),
+                          onShowcase: () => state.toggleShowcase(item),
+                          onShare: () => showSharePlateCard(
+                            context,
+                            item: item,
+                            currency: state.currency,
+                          ),
+                        ),
                       );
                     },
                   ),
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _showAchievements(BuildContext context, AppState state) async {
+    final list = state.achievements;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: VaultColors.panel,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+          children: [
+            Text(
+              'Достижения охотника',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: VaultColors.gold,
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            ...list.map(
+              (a) => ListTile(
+                leading: Icon(
+                  a.unlocked ? Icons.emoji_events : Icons.lock_outline,
+                  color: a.unlocked ? VaultColors.gold : VaultColors.mist,
+                ),
+                title: Text(a.titleRu),
+                subtitle: Text(
+                  '${a.detailRu}${a.goal > 1 ? ' · ${a.progress}/${a.goal}' : ''}',
+                  style: const TextStyle(color: VaultColors.mist),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -210,18 +331,22 @@ class CollectionScreen extends StatelessWidget {
 class _VaultWorthHeader extends StatelessWidget {
   const _VaultWorthHeader({
     required this.count,
+    required this.streetCount,
     required this.totalLabel,
+    required this.streetLabel,
   });
 
   final int count;
+  final int streetCount;
   final String totalLabel;
+  final String streetLabel;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -240,46 +365,68 @@ class _VaultWorthHeader extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: VaultColors.gold.withValues(alpha: 0.14),
-              border: Border.all(color: VaultColors.gold.withValues(alpha: 0.4)),
-            ),
-            child: const Icon(Icons.savings_outlined, color: VaultColors.gold),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: VaultColors.gold.withValues(alpha: 0.14),
+                  border: Border.all(
+                    color: VaultColors.gold.withValues(alpha: 0.4),
+                  ),
+                ),
+                child:
+                    const Icon(Icons.savings_outlined, color: VaultColors.gold),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Весь сейф',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: VaultColors.mist,
+                            letterSpacing: 0.6,
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      totalLabel,
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                color: VaultColors.gold,
+                                fontWeight: FontWeight.w800,
+                              ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                '$count шт.',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: VaultColors.teal,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ],
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Стоимость сейфа',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: VaultColors.mist,
-                        letterSpacing: 0.6,
-                      ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  totalLabel,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: VaultColors.gold,
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            '$count шт.',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: VaultColors.teal,
-                  fontWeight: FontWeight.w700,
-                ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Icon(Icons.verified, size: 16, color: VaultColors.teal),
+              const SizedBox(width: 6),
+              Text(
+                'Street $streetLabel · $streetCount',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: VaultColors.teal,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ],
           ),
         ],
       ),
@@ -326,10 +473,17 @@ class _EmptyVault extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.inventory_2_outlined,
-              size: 56,
-              color: VaultColors.gold.withValues(alpha: 0.65),
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.85, end: 1),
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeOutBack,
+              builder: (context, s, child) =>
+                  Transform.scale(scale: s, child: child),
+              child: Icon(
+                Icons.inventory_2_outlined,
+                size: 56,
+                color: VaultColors.gold.withValues(alpha: 0.65),
+              ),
             ),
             const SizedBox(height: 14),
             Text(
@@ -341,7 +495,8 @@ class _EmptyVault extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Поймай первый номер — редкие серии и столицы поднимают цену сейфа. Сканируй больше, строй коллекцию.',
+              'Сними номер камерой — получишь Street. '
+              'Ручной ввод тоже можно, но без Street-рейтинга. Редкие серии поднимают цену сейфа.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: VaultColors.mist,
@@ -357,10 +512,11 @@ class _EmptyVault extends StatelessWidget {
             const SizedBox(height: 10),
             OutlinedButton.icon(
               onPressed: () {
-                // Prefer navigating user toward Scan tab messaging.
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Открой вкладку «Скан» и сфотографируй номер'),
+                    content: Text(
+                      'Открой вкладку «Скан» → Камера · Street',
+                    ),
                   ),
                 );
                 onScan();

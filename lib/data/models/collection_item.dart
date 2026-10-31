@@ -1,4 +1,5 @@
 import 'rarity.dart';
+import 'trust_level.dart';
 
 /// Extensible collection entry. Today: license plates; later other types.
 enum CollectionType {
@@ -28,6 +29,10 @@ class CollectionItem {
     this.photoUrl,
     this.isPublic = false,
     this.notes,
+    this.trust = TrustLevel.unverified,
+    this.captureSource = CaptureSource.unknown,
+    this.isFavorite = false,
+    this.isShowcase = false,
   });
 
   final String id;
@@ -44,6 +49,12 @@ class CollectionItem {
   final String? photoUrl;
   final bool isPublic;
   final String? notes;
+  final TrustLevel trust;
+  final CaptureSource captureSource;
+  final bool isFavorite;
+  final bool isShowcase;
+
+  bool get isStreet => trust == TrustLevel.street;
 
   CollectionItem copyWith({
     String? id,
@@ -60,6 +71,10 @@ class CollectionItem {
     String? photoUrl,
     bool? isPublic,
     String? notes,
+    TrustLevel? trust,
+    CaptureSource? captureSource,
+    bool? isFavorite,
+    bool? isShowcase,
   }) {
     return CollectionItem(
       id: id ?? this.id,
@@ -76,6 +91,10 @@ class CollectionItem {
       photoUrl: photoUrl ?? this.photoUrl,
       isPublic: isPublic ?? this.isPublic,
       notes: notes ?? this.notes,
+      trust: trust ?? this.trust,
+      captureSource: captureSource ?? this.captureSource,
+      isFavorite: isFavorite ?? this.isFavorite,
+      isShowcase: isShowcase ?? this.isShowcase,
     );
   }
 
@@ -94,9 +113,23 @@ class CollectionItem {
         'photoUrl': photoUrl,
         'isPublic': isPublic,
         'notes': notes,
+        'trust': trust.name,
+        'captureSource': captureSource.name,
+        'isFavorite': isFavorite,
+        'isShowcase': isShowcase,
       };
 
   factory CollectionItem.fromJson(Map<String, dynamic> json) {
+    // Legacy migration: camera photo without trust → street if tagged, else unverified.
+    final trustRaw = json['trust'] as String?;
+    final sourceRaw = json['captureSource'] as String?;
+    final source = CaptureSource.fromName(sourceRaw);
+    final trust = trustRaw != null
+        ? TrustLevel.fromName(trustRaw)
+        : (source.qualifiesStreet
+            ? TrustLevel.street
+            : TrustLevel.unverified);
+
     return CollectionItem(
       id: json['id'] as String,
       userId: json['userId'] as String? ?? '',
@@ -113,6 +146,10 @@ class CollectionItem {
       photoUrl: json['photoUrl'] as String?,
       isPublic: json['isPublic'] as bool? ?? false,
       notes: json['notes'] as String?,
+      trust: trust,
+      captureSource: source,
+      isFavorite: json['isFavorite'] as bool? ?? false,
+      isShowcase: json['isShowcase'] as bool? ?? false,
     );
   }
 }
