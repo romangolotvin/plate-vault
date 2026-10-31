@@ -7,6 +7,7 @@ import 'package:plate_vault/data/plates/plate_registry.dart';
 import 'package:plate_vault/data/rarity/rarity_engine.dart';
 import 'package:plate_vault/data/series/plate_meaning.dart';
 import 'package:plate_vault/data/series/series_catalog.dart';
+import 'package:plate_vault/data/sightings/sighting_service.dart';
 import 'package:plate_vault/data/valuation/currency.dart';
 import 'package:plate_vault/data/valuation/plate_valuation_engine.dart';
 
@@ -238,6 +239,19 @@ void main() {
     expect(CaptureSource.liveCamera.defaultTrust, TrustLevel.street);
     expect(CaptureSource.gallery.qualifiesStreet, isFalse);
     expect(CaptureSource.manual.defaultTrust, TrustLevel.unverified);
+  });
+
+  test('sighting plate id normalizes country + text', () {
+    final id = SightingService.plateId(
+      countryCode: 'ru',
+      rawOrNormalized: merPlateTyped,
+      engine: engine,
+    );
+    expect(id.startsWith('RU_'), isTrue);
+    expect(id.contains(engine.normalize(merPlateTyped)), isTrue);
+    expect(sightingLabelRu(1), contains('1 раз'));
+    expect(sightingLabelRu(3), contains('3 раза'));
+    expect(sightingLabelRu(0), isEmpty);
   });
 
   test('Street board ignores Unverified plates', () {

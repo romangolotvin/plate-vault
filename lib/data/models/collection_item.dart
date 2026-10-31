@@ -26,6 +26,7 @@ class CollectionItem {
     required this.createdAt,
     this.tags = const [],
     this.photoPath,
+    this.photoPathAlt,
     this.photoUrl,
     this.isPublic = false,
     this.notes,
@@ -33,6 +34,7 @@ class CollectionItem {
     this.captureSource = CaptureSource.unknown,
     this.isFavorite = false,
     this.isShowcase = false,
+    this.sightingCount = 0,
   });
 
   final String id;
@@ -45,7 +47,10 @@ class CollectionItem {
   final String rarityReason;
   final DateTime createdAt;
   final List<String> tags;
+  /// Wide / context angle (or primary legacy photo).
   final String? photoPath;
+  /// Close-up angle of the plate.
+  final String? photoPathAlt;
   final String? photoUrl;
   final bool isPublic;
   final String? notes;
@@ -53,8 +58,15 @@ class CollectionItem {
   final CaptureSource captureSource;
   final bool isFavorite;
   final bool isShowcase;
+  /// Cached global/local sighting total at last save (display).
+  final int sightingCount;
 
   bool get isStreet => trust == TrustLevel.street;
+
+  List<String> get allPhotoPaths => [
+        if (photoPath != null && photoPath!.isNotEmpty) photoPath!,
+        if (photoPathAlt != null && photoPathAlt!.isNotEmpty) photoPathAlt!,
+      ];
 
   CollectionItem copyWith({
     String? id,
@@ -68,6 +80,7 @@ class CollectionItem {
     DateTime? createdAt,
     List<String>? tags,
     String? photoPath,
+    String? photoPathAlt,
     String? photoUrl,
     bool? isPublic,
     String? notes,
@@ -75,6 +88,7 @@ class CollectionItem {
     CaptureSource? captureSource,
     bool? isFavorite,
     bool? isShowcase,
+    int? sightingCount,
   }) {
     return CollectionItem(
       id: id ?? this.id,
@@ -88,6 +102,7 @@ class CollectionItem {
       createdAt: createdAt ?? this.createdAt,
       tags: tags ?? this.tags,
       photoPath: photoPath ?? this.photoPath,
+      photoPathAlt: photoPathAlt ?? this.photoPathAlt,
       photoUrl: photoUrl ?? this.photoUrl,
       isPublic: isPublic ?? this.isPublic,
       notes: notes ?? this.notes,
@@ -95,6 +110,7 @@ class CollectionItem {
       captureSource: captureSource ?? this.captureSource,
       isFavorite: isFavorite ?? this.isFavorite,
       isShowcase: isShowcase ?? this.isShowcase,
+      sightingCount: sightingCount ?? this.sightingCount,
     );
   }
 
@@ -110,6 +126,7 @@ class CollectionItem {
         'createdAt': createdAt.toIso8601String(),
         'tags': tags,
         'photoPath': photoPath,
+        'photoPathAlt': photoPathAlt,
         'photoUrl': photoUrl,
         'isPublic': isPublic,
         'notes': notes,
@@ -117,10 +134,10 @@ class CollectionItem {
         'captureSource': captureSource.name,
         'isFavorite': isFavorite,
         'isShowcase': isShowcase,
+        'sightingCount': sightingCount,
       };
 
   factory CollectionItem.fromJson(Map<String, dynamic> json) {
-    // Legacy migration: camera photo without trust → street if tagged, else unverified.
     final trustRaw = json['trust'] as String?;
     final sourceRaw = json['captureSource'] as String?;
     final source = CaptureSource.fromName(sourceRaw);
@@ -143,6 +160,7 @@ class CollectionItem {
           DateTime.now(),
       tags: (json['tags'] as List?)?.map((e) => '$e').toList() ?? const [],
       photoPath: json['photoPath'] as String?,
+      photoPathAlt: json['photoPathAlt'] as String?,
       photoUrl: json['photoUrl'] as String?,
       isPublic: json['isPublic'] as bool? ?? false,
       notes: json['notes'] as String?,
@@ -150,6 +168,7 @@ class CollectionItem {
       captureSource: source,
       isFavorite: json['isFavorite'] as bool? ?? false,
       isShowcase: json['isShowcase'] as bool? ?? false,
+      sightingCount: (json['sightingCount'] as num?)?.toInt() ?? 0,
     );
   }
 }

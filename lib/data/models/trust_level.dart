@@ -1,7 +1,7 @@
 /// Anti-cheat / collector trust for portfolio flex + leaderboards.
 ///
-/// - [street]: live in-app camera capture meeting Street standards.
-/// - [unverified]: manual entry, gallery pick, or failed liveness.
+/// - [street]: dual-angle live in-app camera capture.
+/// - [unverified]: legacy manual/gallery entries (no longer creatable in UI).
 enum TrustLevel {
   street,
   unverified;
@@ -18,9 +18,9 @@ enum TrustLevel {
 
   String get hintRu => switch (this) {
         TrustLevel.street =>
-          'Снято камерой в приложении — засчитывается в Street-рейтинг',
+          'Два ракурса камерой в приложении — Street-рейтинг',
         TrustLevel.unverified =>
-          'Ручной ввод / галерея — виден в коллекции, но не в Street-лидерборде',
+          'Старая запись (галерея/ручной ввод) — не в Street-лидерборде',
       };
 
   static TrustLevel fromName(String? value) {
@@ -33,16 +33,16 @@ enum TrustLevel {
 
 /// How the plate photo/text entered the vault.
 enum CaptureSource {
-  /// Live ImageSource.camera via in-app picker (Street path).
+  /// Dual-angle live camera via in-app picker (Street path).
   liveCamera,
 
-  /// ImageSource.gallery — Unverified for Street credit.
+  /// Legacy gallery — Unverified.
   gallery,
 
-  /// Typed manually with no photo — Unverified.
+  /// Legacy manual — Unverified.
   manual,
 
-  /// Legacy / unknown — treat as Unverified.
+  /// Legacy / unknown — Unverified.
   unknown;
 
   bool get qualifiesStreet => this == CaptureSource.liveCamera;

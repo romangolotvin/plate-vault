@@ -182,12 +182,22 @@ class PlateCard extends StatelessWidget {
                         valueLabel,
                         style:
                             Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  color: VaultColors.gold,
+                                  color: VaultColors.purpleBright,
                                   fontWeight: FontWeight.w800,
                                 ),
                       ),
                     ],
                   ),
+                  if (item.sightingCount > 0) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Этот номер уже находили ${item.sightingCount} ${_raz(item.sightingCount)}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: VaultColors.purpleBright.withValues(alpha: 0.95),
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ],
                   if (meanings.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     MeaningChips(meanings: meanings, max: 3),
@@ -245,6 +255,16 @@ class PlateCard extends StatelessWidget {
         Rarity.epic => VaultColors.epic,
         Rarity.legendary => VaultColors.legendary,
       };
+
+  String _raz(int n) {
+    final mod10 = n % 10;
+    final mod100 = n % 100;
+    if (mod10 == 1 && mod100 != 11) return 'раз';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) {
+      return 'раза';
+    }
+    return 'раз';
+  }
 }
 
 class _MiniTrust extends StatelessWidget {

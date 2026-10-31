@@ -3,218 +3,212 @@ import 'package:provider/provider.dart';
 
 import '../../app_state.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/vault_cta.dart';
 import '../../core/widgets/vault_page.dart';
 import '../../data/leaderboard/leaderboard_service.dart';
-import '../../data/valuation/plate_valuation_engine.dart';
 import '../../data/models/rarity.dart';
-import '../../data/valuation/currency.dart';
+import '../../data/valuation/plate_valuation_engine.dart';
 
-class LeaderboardScreen extends StatefulWidget {
+class LeaderboardScreen extends StatelessWidget {
   const LeaderboardScreen({super.key});
-
-  @override
-  State<LeaderboardScreen> createState() => _LeaderboardScreenState();
-}
-
-class _LeaderboardScreenState extends State<LeaderboardScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabs;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabs = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabs.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
+    final entries = state.streetBoard;
 
     return VaultPage(
       appBar: AppBar(
-        title: const Text('Рейтинги'),
-        bottom: TabBar(
-          controller: _tabs,
-          indicatorColor: VaultColors.gold,
-          labelColor: VaultColors.gold,
-          unselectedLabelColor: VaultColors.mist,
-          tabs: const [
-            Tab(text: 'Street'),
-            Tab(text: 'Неквалиф.'),
-          ],
-        ),
+        title: const Text('Street-рейтинг'),
         actions: [
           IconButton(
             tooltip: 'Обновить',
             onPressed: () => state.refreshLeaderboards(),
-            icon: const Icon(Icons.refresh, color: VaultColors.gold),
+            icon: const Icon(Icons.refresh, color: VaultColors.purpleBright),
           ),
         ],
       ),
-      body: TabBarView(
-        controller: _tabs,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _BoardList(
-            kind: LeaderboardKind.street,
-            entries: state.streetBoard,
-            currency: state.currency,
-            emptyHint:
-                'Street пока пуст — снимай номера камерой в приложении.',
-          ),
-          _BoardList(
-            kind: LeaderboardKind.unverified,
-            entries: state.unverifiedBoard,
-            currency: state.currency,
-            emptyHint:
-                'Добавь номера вручную или из галереи — они попадут сюда.',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BoardList extends StatelessWidget {
-  const _BoardList({
-    required this.kind,
-    required this.entries,
-    required this.currency,
-    required this.emptyHint,
-  });
-
-  final LeaderboardKind kind;
-  final List<LeaderboardEntry> entries;
-  final AppCurrency currency;
-  final String emptyHint;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              gradient: LinearGradient(
-                colors: [
-                  VaultColors.panel,
-                  kind == LeaderboardKind.street
-                      ? VaultColors.teal.withValues(alpha: 0.16)
-                      : VaultColors.gold.withValues(alpha: 0.08),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: VaultHeroPanel(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'STREET',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: VaultColors.purpleBright,
+                          letterSpacing: 2.4,
+                        ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Один рейтинг — по стоимости Street-портфеля',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: VaultColors.cream,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    LeaderboardKind.street.subtitleRu,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: VaultColors.mist,
+                          height: 1.35,
+                        ),
+                  ),
                 ],
               ),
-              border: Border.all(
-                color: VaultColors.gold.withValues(alpha: 0.22),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  kind.labelRu,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: VaultColors.gold,
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  kind.subtitleRu,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: VaultColors.mist,
-                      ),
-                ),
-              ],
             ),
           ),
-        ),
-        Expanded(
-          child: entries.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(
-                      emptyHint,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: VaultColors.mist,
+          Expanded(
+            child: entries.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(28),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.emoji_events_outlined,
+                            size: 56,
+                            color: VaultColors.purple.withValues(alpha: 0.7),
                           ),
+                          const SizedBox(height: 14),
+                          Text(
+                            'Рейтинг пока пуст',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Сними номер двумя ракурсами на вкладке «Скан» — Street-стоимость попадёт сюда.',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: VaultColors.mist,
+                                  height: 1.4,
+                                ),
+                          ),
+                        ],
+                      ),
                     ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    itemCount: entries.length,
+                    itemBuilder: (context, i) {
+                      final e = entries[i];
+                      final label =
+                          PlateValuationEngine.instance.formatDetailed(
+                        PlateValuation(
+                          amountRub: e.portfolioRub,
+                          rarityScore: 0,
+                          rarity: Rarity.common,
+                          rationale: '',
+                        ),
+                        state.currency,
+                      );
+                      final medal = switch (e.rank) {
+                        1 => '1',
+                        2 => '2',
+                        3 => '3',
+                        _ => '${e.rank}',
+                      };
+                      final top = e.rank <= 3;
+                      return TweenAnimationBuilder<double>(
+                        key: ValueKey(e.userId),
+                        tween: Tween(begin: 0.94, end: 1),
+                        duration:
+                            Duration(milliseconds: 280 + (i % 6) * 35),
+                        curve: Curves.easeOutBack,
+                        builder: (context, scale, child) =>
+                            Transform.scale(scale: scale, child: child),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            gradient: LinearGradient(
+                              colors: e.isMe
+                                  ? [
+                                      VaultColors.purple.withValues(alpha: 0.28),
+                                      VaultColors.panel,
+                                    ]
+                                  : [
+                                      VaultColors.panel,
+                                      VaultColors.slate.withValues(alpha: 0.9),
+                                    ],
+                            ),
+                            border: Border.all(
+                              color: e.isMe
+                                  ? VaultColors.purpleBright
+                                      .withValues(alpha: 0.65)
+                                  : VaultColors.purple.withValues(alpha: 0.22),
+                              width: top ? 1.4 : 1,
+                            ),
+                            boxShadow: top
+                                ? [
+                                    BoxShadow(
+                                      color: VaultColors.purple
+                                          .withValues(alpha: 0.25),
+                                      blurRadius: 18,
+                                      offset: const Offset(0, 8),
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
+                            leading: CircleAvatar(
+                              radius: 22,
+                              backgroundColor: top
+                                  ? VaultColors.purple.withValues(alpha: 0.35)
+                                  : VaultColors.slate,
+                              child: Text(
+                                medal,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  color: top
+                                      ? VaultColors.purpleBright
+                                      : VaultColors.mist,
+                                ),
+                              ),
+                            ),
+                            title: Text(
+                              e.isMe ? '${e.displayName} (вы)' : e.displayName,
+                              style: const TextStyle(fontWeight: FontWeight.w800),
+                            ),
+                            subtitle: Text(
+                              '${e.plateCount} Street-номеров',
+                              style: const TextStyle(color: VaultColors.mist),
+                            ),
+                            trailing: Text(
+                              label,
+                              style: const TextStyle(
+                                color: VaultColors.purpleBright,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                  itemCount: entries.length,
-                  itemBuilder: (context, i) {
-                    final e = entries[i];
-                    final label = PlateValuationEngine.instance.formatDetailed(
-                      PlateValuation(
-                        amountRub: e.portfolioRub,
-                        rarityScore: 0,
-                        rarity: Rarity.common,
-                        rationale: '',
-                      ),
-                      currency,
-                    );
-                    final medal = switch (e.rank) {
-                      1 => '🥇',
-                      2 => '🥈',
-                      3 => '🥉',
-                      _ => '#${e.rank}',
-                    };
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 280),
-                      curve: Curves.easeOutCubic,
-                      margin: const EdgeInsets.only(bottom: 10),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        color: e.isMe
-                            ? VaultColors.teal.withValues(alpha: 0.14)
-                            : VaultColors.panel.withValues(alpha: 0.95),
-                        border: Border.all(
-                          color: e.isMe
-                              ? VaultColors.teal.withValues(alpha: 0.55)
-                              : VaultColors.gold.withValues(alpha: 0.18),
-                        ),
-                      ),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: VaultColors.slate,
-                          child: Text(
-                            medal,
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                        ),
-                        title: Text(
-                          e.isMe ? '${e.displayName} (вы)' : e.displayName,
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                        subtitle: Text(
-                          '${e.plateCount} номеров · ${kind.labelRu}',
-                          style: const TextStyle(color: VaultColors.mist),
-                        ),
-                        trailing: Text(
-                          label,
-                          style: const TextStyle(
-                            color: VaultColors.gold,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 }

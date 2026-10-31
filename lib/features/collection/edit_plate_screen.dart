@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../app_state.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/plate_badge.dart';
+import '../../core/widgets/vault_cta.dart';
 import '../../core/widgets/vault_motion.dart';
 import '../../core/widgets/vault_scaffold.dart';
 import '../../data/models/collection_item.dart';
@@ -11,6 +14,7 @@ import '../../data/models/rarity.dart';
 import '../../data/models/trust_level.dart';
 import '../../data/plates/plate_registry.dart';
 import '../../data/rarity/rarity_engine.dart';
+import '../../data/sightings/sighting_service.dart';
 import '../../data/valuation/plate_valuation_engine.dart';
 
 class EditPlateScreen extends StatefulWidget {
@@ -20,14 +24,16 @@ class EditPlateScreen extends StatefulWidget {
     this.initialText,
     this.initialCountry,
     this.photoPath,
-    this.captureSource = CaptureSource.manual,
-    this.trust = TrustLevel.unverified,
+    this.photoPathAlt,
+    this.captureSource = CaptureSource.liveCamera,
+    this.trust = TrustLevel.street,
   });
 
   final CollectionItem? existing;
   final String? initialText;
   final String? initialCountry;
   final String? photoPath;
+  final String? photoPathAlt;
   final CaptureSource captureSource;
   final TrustLevel trust;
 
@@ -50,6 +56,8 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
   late String _country;
   final _engine = RarityEngine.instance;
   bool _saving = false;
+  int _priorSightings = 0;
+  bool _sightingsLoaded = false;
 
   CaptureSource get _source =>
       widget.existing?.captureSource ?? widget.captureSource;
@@ -58,6 +66,11 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
     if (widget.existing != null) return widget.existing!.trust;
     return _source.qualifiesStreet ? widget.trust : TrustLevel.unverified;
   }
+
+  String? get _photoWide =>
+      widget.photoPath ?? widget.existing?.photoPath;
+  String? get _photoClose =>
+      widget.photoPathAlt ?? widget.existing?.photoPathAlt;
 
   @override
   void initState() {
@@ -68,6 +81,33 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
     _notesCtrl = TextEditingController(text: widget.existing?.notes ?? '');
     _country =
         widget.existing?.countryCode ?? widget.initialCountry ?? 'RU';
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshSightings());
+  }
+
+  Future<void> _refreshSightings() async {
+    final text = _textCtrl.text.trim();
+    if (text.isEmpty) {
+      setState(() {
+        _priorSightings = widget.existing?.sightingCount ?? 0;
+        _sightingsLoaded = true;
+      });
+      return;
+    }
+    final state = context.read<AppState>();
+    final count = await state.peekSightings(
+      countryCode: _country,
+      rawText: text,
+    );
+    if (!mounted) return;
+    // For existing items, show stored count; for new, prior = current aggregate.
+    setState(() {
+      _priorSightings = widget.existing != null
+          ? (widget.existing!.sightingCount > 0
+              ? widget.existing!.sightingCount
+              : count)
+          : count;
+      _sightingsLoaded = true;
+    });
   }
 
   @override
@@ -103,48 +143,27 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
             rawText: _textCtrl.text,
             excludeId: widget.existing?.id,
           );
+    final sightingText = _sightingsLoaded && _priorSightings > 0
+        ? sightingLabelRu(_priorSightings)
+        : null;
 
     return VaultScaffold(
       appBar: AppBar(
-        title: Text(editing ? 'Редактировать номер' : 'Новый номер'),
+        title: Text(editing ? 'Редактировать номер' : 'Новый Street-номер'),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
           RarityPulse(
             rarity: preview.rarity,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(14, 16, 14, 18),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(22),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    VaultColors.slate.withValues(alpha: 0.98),
-                    VaultColors.charcoal.withValues(alpha: 0.95),
-                    preview.rarity.index >= Rarity.epic.index
-                        ? VaultColors.legendary.withValues(alpha: 0.12)
-                        : VaultColors.gold.withValues(alpha: 0.05),
-                  ],
-                ),
-                border: Border.all(
-                  color: VaultColors.gold.withValues(alpha: 0.28),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: VaultColors.gold.withValues(alpha: 0.12),
-                    blurRadius: 28,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
-              ),
+            child: VaultHeroPanel(
+              padding: const EdgeInsets.fromLTRB(14, 18, 14, 20),
               child: Column(
                 children: [
                   Text(
                     'ТРОФЕЙ СЕЙФА',
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: VaultColors.gold.withValues(alpha: 0.9),
+                          color: VaultColors.purpleBright.withValues(alpha: 0.95),
                           letterSpacing: 2.4,
                         ),
                   ),
@@ -166,7 +185,7 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
                     valuation: valuation,
                     currency: state.currency,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          color: VaultColors.gold,
+                          color: VaultColors.purpleBright,
                           fontWeight: FontWeight.w800,
                         ),
                   ),
@@ -199,6 +218,36 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
                   color: VaultColors.mist,
                 ),
           ),
+          if (sightingText != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                color: VaultColors.purple.withValues(alpha: 0.14),
+                border: Border.all(
+                  color: VaultColors.purpleBright.withValues(alpha: 0.45),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.visibility_rounded,
+                      color: VaultColors.purpleBright, size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      sightingText,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: VaultColors.cream,
+                            fontWeight: FontWeight.w600,
+                            height: 1.3,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           if (dup != null) ...[
             const SizedBox(height: 10),
             Container(
@@ -218,6 +267,22 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
               ),
             ),
           ],
+          if (_photoWide != null || _photoClose != null) ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              height: 110,
+              child: Row(
+                children: [
+                  if (_photoWide != null)
+                    Expanded(child: _PhotoChip(path: _photoWide!, label: 'Широкий')),
+                  if (_photoWide != null && _photoClose != null)
+                    const SizedBox(width: 10),
+                  if (_photoClose != null)
+                    Expanded(child: _PhotoChip(path: _photoClose!, label: 'Крупный')),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 18),
           TextField(
             controller: _textCtrl,
@@ -230,7 +295,10 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
               labelText: 'Госномер',
               hintText: 'МЕР777178',
             ),
-            onChanged: (_) => setState(() {}),
+            onChanged: (_) {
+              setState(() {});
+              _refreshSightings();
+            },
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
@@ -240,7 +308,10 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
             items: _countries
                 .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                 .toList(),
-            onChanged: (v) => setState(() => _country = v ?? 'XX'),
+            onChanged: (v) {
+              setState(() => _country = v ?? 'XX');
+              _refreshSightings();
+            },
           ),
           const SizedBox(height: 12),
           TextField(
@@ -258,19 +329,12 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
             const SizedBox(height: 12),
           ],
           MeaningDetailCard(meanings: preview.meanings),
-          if (widget.photoPath != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Фото: ${widget.photoPath}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: VaultColors.mist.withValues(alpha: 0.7),
-                  ),
-            ),
-          ],
           const SizedBox(height: 24),
-          FilledButton(
+          VaultCta(
+            label: editing ? 'Сохранить' : 'Добавить в коллекцию',
+            icon: Icons.inventory_2_rounded,
+            busy: _saving,
             onPressed: _saving ? null : () => _save(preview.rarity, valueLabel),
-            child: Text(editing ? 'Сохранить' : 'Добавить в коллекцию'),
           ),
         ],
       ),
@@ -297,14 +361,16 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
             notes: _notesCtrl.text.trim().isEmpty
                 ? null
                 : _notesCtrl.text.trim(),
-            photoPath: widget.photoPath ?? widget.existing!.photoPath,
+            photoPath: _photoWide ?? widget.existing!.photoPath,
+            photoPathAlt: _photoClose ?? widget.existing!.photoPathAlt,
           ),
         );
       } else {
         await state.addPlate(
           countryCode: _country,
           rawText: text,
-          photoPath: widget.photoPath,
+          photoPath: _photoWide,
+          photoPathAlt: _photoClose,
           notes: _notesCtrl.text.trim().isEmpty
               ? null
               : _notesCtrl.text.trim(),
@@ -334,6 +400,48 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
   }
 }
 
+class _PhotoChip extends StatelessWidget {
+  const _PhotoChip({required this.path, required this.label});
+
+  final String path;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (File(path).existsSync())
+            Image.file(File(path), fit: BoxFit.cover)
+          else
+            ColoredBox(color: VaultColors.slate),
+          Positioned(
+            left: 8,
+            bottom: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: VaultColors.cream,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _TrustChip extends StatelessWidget {
   const _TrustChip({required this.trust});
 
@@ -342,7 +450,7 @@ class _TrustChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final street = trust == TrustLevel.street;
-    final color = street ? VaultColors.teal : VaultColors.mist;
+    final color = street ? VaultColors.purpleBright : VaultColors.mist;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(

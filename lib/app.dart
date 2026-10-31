@@ -46,13 +46,13 @@ class _RootGate extends StatelessWidget {
                 child: Text(
                   'Plate Vault',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: VaultColors.gold,
+                        color: VaultColors.purpleBright,
                         fontWeight: FontWeight.w800,
                       ),
                 ),
               ),
               const SizedBox(height: 20),
-              const CircularProgressIndicator(),
+              const CircularProgressIndicator(color: VaultColors.purple),
             ],
           ),
         ),

@@ -39,6 +39,22 @@ class PlateOcrService {
     return _pickBestPlateCandidate(result.text);
   }
 
+  /// OCR several frames and keep the highest-confidence candidate.
+  Future<PlateOcrResult?> recognizeBestFromFiles(List<String> paths) async {
+    PlateOcrResult? best;
+    for (final path in paths) {
+      if (path.isEmpty) continue;
+      try {
+        final r = await recognizeRichFromFile(path);
+        if (r == null) continue;
+        if (best == null || r.confidence > best.confidence) {
+          best = r;
+        }
+      } catch (_) {}
+    }
+    return best;
+  }
+
   Future<String?> recognizeFromFileObject(File file) {
     return recognizeFromFile(file.path);
   }

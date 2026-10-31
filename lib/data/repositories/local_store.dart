@@ -13,6 +13,8 @@ class LocalStore {
   static const _profileKey = 'user_profile_v1';
   static const _sessionKey = 'local_session_v1';
   static const _currencyKey = 'preferred_currency_v1';
+  static const _sightingsKey = 'plate_sightings_v1';
+  static const _dualAngleTutorialKey = 'dual_angle_tutorial_seen_v1';
 
   Future<List<CollectionItem>> loadItems() async {
     final prefs = await SharedPreferences.getInstance();
@@ -76,5 +78,37 @@ class LocalStore {
       await dir.create(recursive: true);
     }
     return dir.path;
+  }
+
+  Future<Map<String, int>> loadSightings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_sightingsKey);
+    if (raw == null || raw.isEmpty) return {};
+    final map = jsonDecode(raw) as Map<String, dynamic>;
+    return {
+      for (final e in map.entries) e.key: (e.value as num).toInt(),
+    };
+  }
+
+  Future<int> getSightingCount(String plateId) async {
+    final all = await loadSightings();
+    return all[plateId] ?? 0;
+  }
+
+  Future<void> setSightingCount(String plateId, int count) async {
+    final prefs = await SharedPreferences.getInstance();
+    final all = await loadSightings();
+    all[plateId] = count;
+    await prefs.setString(_sightingsKey, jsonEncode(all));
+  }
+
+  Future<bool> hasSeenDualAngleTutorial() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_dualAngleTutorialKey) ?? false;
+  }
+
+  Future<void> setDualAngleTutorialSeen() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_dualAngleTutorialKey, true);
   }
 }

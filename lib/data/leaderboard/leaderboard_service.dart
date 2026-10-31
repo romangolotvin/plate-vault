@@ -6,10 +6,10 @@ import '../models/user_profile.dart';
 import '../valuation/plate_valuation_engine.dart';
 
 enum LeaderboardKind {
-  /// All plates / unverified-weighted — «неквалифицированный».
+  /// Legacy: all plates (kept for tests / old data).
   unverified,
 
-  /// Only Street-verified plates count toward portfolio value.
+  /// Only Street-verified plates — the sole public leaderboard.
   street,
 }
 
@@ -21,9 +21,9 @@ extension LeaderboardKindX on LeaderboardKind {
 
   String get subtitleRu => switch (this) {
         LeaderboardKind.unverified =>
-          'Все номера · ручной ввод и галерея тоже считаются',
+          'Устаревший режим · больше не показывается',
         LeaderboardKind.street =>
-          'Только Street-verified · камера в приложении',
+          'Портфель Street · два ракурса камерой в приложении',
       };
 }
 
@@ -181,32 +181,29 @@ class LeaderboardService {
     ];
   }
 
-  /// Push my scores so other devices can see them when cloud is on.
+  /// Push Street portfolio so other devices can see it when cloud is on.
   Future<void> publishMine({
     required UserProfile me,
     required List<CollectionItem> myItems,
   }) async {
     if (!_cloudEnabled || _firestore == null) return;
     try {
-      for (final kind in LeaderboardKind.values) {
-        final worth = portfolioWorth(myItems, kind: kind);
-        final count = plateCount(myItems, kind: kind);
-        await _firestore!
-            .collection('leaderboards')
-            .doc(kind.name)
-            .collection('entries')
-            .doc(me.uid)
-            .set({
-          'userId': me.uid,
-          'displayName': me.displayName,
-          'portfolioRub': worth,
-          'plateCount': count,
-          'updatedAt': FieldValue.serverTimestamp(),
-          'trust': kind == LeaderboardKind.street
-              ? TrustLevel.street.name
-              : TrustLevel.unverified.name,
-        }, SetOptions(merge: true));
-      }
+      const kind = LeaderboardKind.street;
+      final worth = portfolioWorth(myItems, kind: kind);
+      final count = plateCount(myItems, kind: kind);
+      await _firestore!
+          .collection('leaderboards')
+          .doc(kind.name)
+          .collection('entries')
+          .doc(me.uid)
+          .set({
+        'userId': me.uid,
+        'displayName': me.displayName,
+        'portfolioRub': worth,
+        'plateCount': count,
+        'updatedAt': FieldValue.serverTimestamp(),
+        'trust': TrustLevel.street.name,
+      }, SetOptions(merge: true));
     } catch (_) {}
   }
 }

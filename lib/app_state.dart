@@ -15,6 +15,7 @@ import 'data/ocr/plate_ocr_service.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/collection_repository.dart';
 import 'data/repositories/local_store.dart';
+import 'data/sightings/sighting_service.dart';
 import 'data/valuation/currency.dart';
 import 'data/valuation/plate_valuation_engine.dart';
 import 'firebase_options.dart';
@@ -35,6 +36,7 @@ class AppState extends ChangeNotifier {
   late AuthRepository authRepository;
   late CollectionRepository collectionRepository;
   late LeaderboardService leaderboardService;
+  late SightingService sightingService;
 
   bool ready = false;
   bool cloudEnabled = false;
@@ -53,7 +55,6 @@ class AppState extends ChangeNotifier {
   List<CollectionItem> publicFeed = [];
   List<UserProfile> publicProfiles = [];
   List<LeaderboardEntry> streetBoard = [];
-  List<LeaderboardEntry> unverifiedBoard = [];
 
   UserProfile? get profile => authRepository.currentProfile;
   bool get isSignedIn => profile != null;
@@ -144,6 +145,11 @@ class AppState extends ChangeNotifier {
         firestore: cloudEnabled ? FirebaseFirestore.instance : null,
         cloudEnabled: cloudEnabled,
       );
+      sightingService = SightingService(
+        localStore: localStore,
+        firestore: cloudEnabled ? FirebaseFirestore.instance : null,
+        cloudEnabled: cloudEnabled,
+      );
       await collectionRepository.load();
       await authRepository.restoreSession();
       currency = await localStore.loadCurrency();
@@ -155,6 +161,7 @@ class AppState extends ChangeNotifier {
       authRepository = AuthRepository(localStore: localStore);
       collectionRepository = CollectionRepository(localStore: localStore);
       leaderboardService = LeaderboardService();
+      sightingService = SightingService(localStore: localStore);
       await collectionRepository.load();
       await authRepository.restoreSession();
       currency = await localStore.loadCurrency();
@@ -239,25 +246,42 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<int> peekSightings({
+    required String countryCode,
+    required String rawText,
+  }) {
+    return sightingService.getCount(
+      countryCode: countryCode,
+      rawText: rawText,
+    );
+  }
+
   Future<CollectionItem> addPlate({
     required String countryCode,
     required String rawText,
     String? photoPath,
+    String? photoPathAlt,
     String? notes,
     bool? isPublic,
-    TrustLevel trust = TrustLevel.unverified,
-    CaptureSource captureSource = CaptureSource.manual,
+    TrustLevel trust = TrustLevel.street,
+    CaptureSource captureSource = CaptureSource.liveCamera,
   }) async {
     final user = profile!;
+    final total = await sightingService.recordSighting(
+      countryCode: countryCode,
+      rawText: rawText,
+    );
     final item = await collectionRepository.addPlate(
       userId: user.uid,
       countryCode: countryCode,
       rawText: rawText,
       photoPath: photoPath,
+      photoPathAlt: photoPathAlt,
       notes: notes,
       isPublic: isPublic ?? user.publicCollectionEnabled,
       trust: trust,
       captureSource: captureSource,
+      sightingCount: total,
     );
     await authRepository.updateProfile(
       user.copyWith(itemCount: collectionRepository.items.length),
@@ -346,13 +370,6 @@ class AppState extends ChangeNotifier {
     };
     streetBoard = await leaderboardService.build(
       kind: LeaderboardKind.street,
-      profiles: publicProfiles,
-      allVisibleItems: byId.values.toList(),
-      me: me,
-      myItems: mine,
-    );
-    unverifiedBoard = await leaderboardService.build(
-      kind: LeaderboardKind.unverified,
       profiles: publicProfiles,
       allVisibleItems: byId.values.toList(),
       me: me,

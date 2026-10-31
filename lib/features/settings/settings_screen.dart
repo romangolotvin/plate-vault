@@ -8,6 +8,7 @@ import '../../app_state.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../core/update/update_service.dart';
+import '../../core/widgets/vault_cta.dart';
 import '../../core/widgets/vault_page.dart';
 import '../../data/valuation/currency.dart';
 import '../../data/valuation/plate_valuation_engine.dart';
@@ -85,55 +86,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           if (profile != null)
-            Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                gradient: LinearGradient(
-                  colors: [
-                    VaultColors.panel,
-                    VaultColors.teal.withValues(alpha: 0.12),
-                  ],
-                ),
-                border: Border.all(
-                  color: VaultColors.gold.withValues(alpha: 0.25),
-                ),
-              ),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: VaultColors.slate,
-                  child: Icon(
-                    Icons.person,
-                    color: VaultColors.gold.withValues(alpha: 0.95),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: VaultHeroPanel(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: VaultColors.slate,
+                    child: Icon(
+                      Icons.person,
+                      color: VaultColors.purpleBright.withValues(alpha: 0.95),
+                    ),
+                  ),
+                  title: Text(
+                    profile.displayName,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  subtitle: Text(
+                    profile.isLocalOnly
+                        ? 'Локальный сейф · Street-охотник'
+                        : (profile.email ?? profile.uid),
+                    style: const TextStyle(color: VaultColors.mist),
                   ),
                 ),
-                title: Text(
-                  profile.displayName,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                subtitle: Text(
-                  profile.isLocalOnly
-                      ? 'Локальный сейф'
-                      : (profile.email ?? profile.uid),
-                  style: const TextStyle(color: VaultColors.mist),
-                ),
               ),
             ),
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              color: VaultColors.panel.withValues(alpha: 0.92),
-              border: Border.all(
-                color: VaultColors.gold.withValues(alpha: 0.2),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: VaultColors.gold.withValues(alpha: 0.08),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
+          VaultHeroPanel(
+            padding: EdgeInsets.zero,
             child: Column(
               children: [
                 SwitchListTile(
@@ -145,11 +124,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             profile.copyWith(publicCollectionEnabled: v),
                           ),
                 ),
-                Divider(height: 1, color: VaultColors.gold.withValues(alpha: 0.12)),
+                Divider(
+                    height: 1,
+                    color: VaultColors.purple.withValues(alpha: 0.14)),
                 ListTile(
                   leading: const Icon(
                     Icons.payments_outlined,
-                    color: VaultColors.gold,
+                    color: VaultColors.purpleBright,
                   ),
                   title: const Text('Валюта оценки'),
                   subtitle: Text(
@@ -174,32 +155,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     },
                   ),
                 ),
-                Divider(height: 1, color: VaultColors.gold.withValues(alpha: 0.12)),
+                Divider(
+                    height: 1,
+                    color: VaultColors.purple.withValues(alpha: 0.14)),
                 ListTile(
                   leading: Icon(
                     Icons.cloud_outlined,
                     color: state.cloudEnabled
-                        ? VaultColors.teal
+                        ? VaultColors.purpleBright
                         : VaultColors.mist,
                   ),
                   title: const Text('Облако Firebase'),
                   subtitle: Text(
                     state.cloudEnabled
-                        ? 'Подключено'
-                        : 'Не настроено (локальный режим)',
+                        ? 'Подключено · глобальный счётчик находок'
+                        : 'Не настроено (локальный счётчик находок)',
                     style: const TextStyle(color: VaultColors.mist),
                   ),
                 ),
-                Divider(height: 1, color: VaultColors.gold.withValues(alpha: 0.12)),
+                Divider(
+                    height: 1,
+                    color: VaultColors.purple.withValues(alpha: 0.14)),
                 ListTile(
-                  leading: const Icon(Icons.info_outline, color: VaultColors.gold),
+                  leading: const Icon(Icons.info_outline,
+                      color: VaultColors.purpleBright),
                   title: const Text('Версия'),
                   subtitle: Text(
                     '$version · ${AppConstants.applicationId}',
                     style: const TextStyle(color: VaultColors.mist),
                   ),
                 ),
-                Divider(height: 1, color: VaultColors.gold.withValues(alpha: 0.12)),
+                Divider(
+                    height: 1,
+                    color: VaultColors.purple.withValues(alpha: 0.14)),
                 ListTile(
                   leading: _checking
                       ? const SizedBox(
@@ -209,7 +197,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         )
                       : const Icon(
                           Icons.system_update,
-                          color: VaultColors.teal,
+                          color: VaultColors.magenta,
                         ),
                   title: const Text('Проверить обновления'),
                   subtitle: Text(
@@ -223,19 +211,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              color: VaultColors.panel.withValues(alpha: 0.9),
-              border: Border.all(
-                color: const Color(0xFFE57373).withValues(alpha: 0.35),
-              ),
-            ),
-            child: ListTile(
-              leading: const Icon(Icons.logout, color: Color(0xFFE57373)),
-              title: const Text('Выйти'),
+          const SizedBox(height: 14),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
               onTap: () => state.signOut(),
+              borderRadius: BorderRadius.circular(22),
+              child: Ink(
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: const Color(0xFFE57373).withValues(alpha: 0.45),
+                  ),
+                  color: const Color(0xFFE57373).withValues(alpha: 0.08),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.logout, color: Color(0xFFE57373)),
+                    SizedBox(width: 10),
+                    Text(
+                      'Выйти',
+                      style: TextStyle(
+                        color: Color(0xFFE57373),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ],

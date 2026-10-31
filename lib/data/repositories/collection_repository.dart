@@ -37,6 +37,7 @@ class CollectionRepository {
     required String countryCode,
     required String rawText,
     String? photoPath,
+    String? photoPathAlt,
     String? notes,
     bool isPublic = false,
     List<String> tags = const [],
@@ -44,6 +45,7 @@ class CollectionRepository {
     CaptureSource captureSource = CaptureSource.manual,
     bool isFavorite = false,
     bool isShowcase = false,
+    int sightingCount = 0,
   }) async {
     final normalized = _rarity.normalize(rawText);
     final result = _rarity.evaluate(
@@ -71,12 +73,14 @@ class CollectionRepository {
       createdAt: DateTime.now(),
       tags: mergedTags,
       photoPath: photoPath,
+      photoPathAlt: photoPathAlt,
       isPublic: isPublic,
       notes: notes,
       trust: effectiveTrust,
       captureSource: captureSource,
       isFavorite: isFavorite,
       isShowcase: isShowcase,
+      sightingCount: sightingCount,
     );
     _cache = [item, ..._cache];
     await _persist(userId);
