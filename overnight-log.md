@@ -6,4 +6,5 @@
 - Dual-angle camera-only Street capture + tutorial; gallery/manual removed
 - Single Street leaderboard by portfolio value
 - Global/local sighting counter + RU copy on edit + tiles
-- APK → `E:\dev\builds\plate-vault-release.apk` + GitHub release
+- APK → `E:\dev\builds\plate-vault-release.apk`
+- Release → https://github.com/romangolotvin/plate-vault/releases/tag/v1.4.0
