@@ -22,6 +22,8 @@ class LocalStore {
   static const _duelKey = 'weekly_duel_v1';
   static const _clanKey = 'my_clan_v1';
   static const _clansDirKey = 'known_clans_v1';
+  static const _cooldownsKey = 'plate_cooldowns_v1';
+  static const _reportsKey = 'plate_reports_v1';
 
   Future<List<CollectionItem>> loadItems() async {
     final prefs = await SharedPreferences.getInstance();
@@ -188,5 +190,32 @@ class LocalStore {
   Future<void> saveKnownClans(List<Map<String, dynamic>> clans) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_clansDirKey, jsonEncode(clans));
+  }
+
+  Future<Map<String, int>> loadCooldowns() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_cooldownsKey);
+    if (raw == null || raw.isEmpty) return {};
+    final map = jsonDecode(raw) as Map<String, dynamic>;
+    return {for (final e in map.entries) e.key: (e.value as num).toInt()};
+  }
+
+  Future<void> saveCooldowns(Map<String, int> map) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_cooldownsKey, jsonEncode(map));
+  }
+
+  /// plateId -> report count (local anti-cheat complaints).
+  Future<Map<String, int>> loadReports() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_reportsKey);
+    if (raw == null || raw.isEmpty) return {};
+    final map = jsonDecode(raw) as Map<String, dynamic>;
+    return {for (final e in map.entries) e.key: (e.value as num).toInt()};
+  }
+
+  Future<void> saveReports(Map<String, int> map) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_reportsKey, jsonEncode(map));
   }
 }

@@ -62,11 +62,21 @@ class LeaderboardService {
   double portfolioWorth(
     List<CollectionItem> items, {
     required LeaderboardKind kind,
+    String? seasonId,
   }) {
     var sum = 0.0;
     for (final item in items) {
       if (kind == LeaderboardKind.street && !item.isStreet) continue;
-      // Unverified board: all plates, but Street plates still count full value.
+      if (seasonId != null) {
+        final local = DateTime(
+          item.createdAt.year,
+          item.createdAt.month,
+          item.createdAt.day,
+        );
+        final id =
+            '${local.year.toString().padLeft(4, '0')}-${local.month.toString().padLeft(2, '0')}';
+        if (id != seasonId) continue;
+      }
       sum += _valuation
           .estimate(countryCode: item.countryCode, rawText: item.rawText)
           .amountRub;
@@ -77,11 +87,21 @@ class LeaderboardService {
   int plateCount(
     List<CollectionItem> items, {
     required LeaderboardKind kind,
+    String? seasonId,
   }) {
+    Iterable<CollectionItem> filtered = items;
     if (kind == LeaderboardKind.street) {
-      return items.where((e) => e.isStreet).length;
+      filtered = filtered.where((e) => e.isStreet);
     }
-    return items.length;
+    if (seasonId != null) {
+      filtered = filtered.where((e) {
+        final local = DateTime(e.createdAt.year, e.createdAt.month, e.createdAt.day);
+        final id =
+            '${local.year.toString().padLeft(4, '0')}-${local.month.toString().padLeft(2, '0')}';
+        return id == seasonId;
+      });
+    }
+    return filtered.length;
   }
 
   /// Build rankings from local public profiles + their public items,
@@ -92,6 +112,7 @@ class LeaderboardService {
     required List<CollectionItem> allVisibleItems,
     UserProfile? me,
     List<CollectionItem>? myItems,
+    String? seasonId,
   }) async {
     final byUser = <String, List<CollectionItem>>{};
     for (final item in allVisibleItems) {
@@ -106,8 +127,8 @@ class LeaderboardService {
 
     void addProfile(UserProfile p, List<CollectionItem> items) {
       if (!seen.add(p.uid)) return;
-      final worth = portfolioWorth(items, kind: kind);
-      final count = plateCount(items, kind: kind);
+      final worth = portfolioWorth(items, kind: kind, seasonId: seasonId);
+      final count = plateCount(items, kind: kind, seasonId: seasonId);
       if (count == 0 && worth == 0 && p.uid != me?.uid) return;
       rows.add(
         LeaderboardEntry(

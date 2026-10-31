@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../app_state.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/license_plate_view.dart';
+import '../../core/widgets/share_plate_card.dart';
 import '../../core/widgets/vault_cta.dart';
 import '../../data/models/collection_item.dart';
 import '../../data/museum/museum_picker.dart';
@@ -173,7 +174,21 @@ class _MuseumTile extends StatelessWidget {
                       ),
                 ),
               ),
-              if (editable)
+              GestureDetector(
+                onTap: () => showSharePlateCard(
+                  context,
+                  item: item,
+                  currency: state.currency,
+                  seasonLabel: state.currentSeason.labelRu,
+                ),
+                child: const Icon(
+                  Icons.ios_share,
+                  size: 18,
+                  color: VaultColors.purpleBright,
+                ),
+              ),
+              if (editable) ...[
+                const SizedBox(width: 6),
                 GestureDetector(
                   onTap: () => state.toggleShowcase(item),
                   child: Icon(
@@ -184,6 +199,7 @@ class _MuseumTile extends StatelessWidget {
                     color: VaultColors.magenta,
                   ),
                 ),
+              ],
             ],
           ),
         ],

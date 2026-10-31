@@ -248,6 +248,45 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
               ),
             ),
           ],
+          if (!editing &&
+              _textCtrl.text.trim().isNotEmpty &&
+              state.cooldownMessageFor(
+                    countryCode: _country,
+                    rawText: _textCtrl.text,
+                  ) !=
+                  null) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                color: VaultColors.magenta.withValues(alpha: 0.12),
+                border: Border.all(
+                  color: VaultColors.magenta.withValues(alpha: 0.5),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.timer_outlined,
+                      color: VaultColors.magenta, size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      state.cooldownMessageFor(
+                            countryCode: _country,
+                            rawText: _textCtrl.text,
+                          ) ??
+                          '',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: VaultColors.cream,
+                            height: 1.35,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           if (dup != null) ...[
             const SizedBox(height: 10),
             Container(
@@ -388,6 +427,12 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
         );
       }
       if (mounted) Navigator.of(context).pop();
+    } on StateError catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message)),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

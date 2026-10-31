@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../data/models/collection_item.dart';
 import '../../data/models/trust_level.dart';
+import '../../data/seasons/season.dart';
 import '../../data/valuation/currency.dart';
 import '../../data/valuation/plate_valuation_engine.dart';
 import '../theme.dart';
@@ -14,6 +15,7 @@ Future<void> showSharePlateCard(
   BuildContext context, {
   required CollectionItem item,
   required AppCurrency currency,
+  String? seasonLabel,
 }) async {
   final valuation = PlateValuationEngine.instance.estimate(
     countryCode: item.countryCode,
@@ -23,9 +25,10 @@ Future<void> showSharePlateCard(
       PlateValuationEngine.instance.formatDetailed(valuation, currency);
   final trust = item.trust;
   final flexAllowed = trust == TrustLevel.street;
+  final season = seasonLabel ?? Season.current().labelRu;
   final shareText = flexAllowed
       ? 'Plate Vault · Street ${item.rawText} (${item.countryCode}) · '
-          '$valueLabel · ${item.rarity.labelRu}'
+          '$valueLabel · ${item.rarity.labelRu} · сезон $season'
       : 'Plate Vault · ${item.rawText} · Unverified '
           '(не Street) · оценка $valueLabel';
 
@@ -46,13 +49,15 @@ Future<void> showSharePlateCard(
               colors: [
                 VaultColors.panel,
                 VaultColors.slate,
-                VaultColors.gold.withValues(alpha: 0.1),
+                VaultColors.purple.withValues(alpha: 0.22),
               ],
             ),
-            border: Border.all(color: VaultColors.gold.withValues(alpha: 0.35)),
+            border: Border.all(
+              color: VaultColors.purpleBright.withValues(alpha: 0.45),
+            ),
             boxShadow: [
               BoxShadow(
-                color: VaultColors.gold.withValues(alpha: 0.2),
+                color: VaultColors.purple.withValues(alpha: 0.28),
                 blurRadius: 28,
                 offset: const Offset(0, 12),
               ),
@@ -64,9 +69,19 @@ Future<void> showSharePlateCard(
               Text(
                 flexAllowed ? 'STREET SHARE' : 'UNVERIFIED · без Street-flex',
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: flexAllowed ? VaultColors.teal : VaultColors.mist,
+                      color: flexAllowed
+                          ? VaultColors.purpleBright
+                          : VaultColors.mist,
                       letterSpacing: 1.6,
                       fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                season,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: VaultColors.magenta,
+                      fontWeight: FontWeight.w700,
                     ),
               ),
               const SizedBox(height: 14),
@@ -81,7 +96,7 @@ Future<void> showSharePlateCard(
               Text(
                 valueLabel,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: VaultColors.gold,
+                      color: VaultColors.purpleBright,
                       fontWeight: FontWeight.w800,
                     ),
               ),

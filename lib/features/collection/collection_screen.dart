@@ -88,6 +88,16 @@ class CollectionScreen extends StatelessWidget {
                   streetCount: state.streetCount,
                   totalLabel: totalLabel,
                   streetLabel: streetLabel,
+                  seasonLabel: PlateValuationEngine.instance.formatDetailed(
+                    PlateValuation(
+                      amountRub: state.seasonWorthRub,
+                      rarityScore: 0,
+                      rarity: Rarity.common,
+                      rationale: '',
+                    ),
+                    state.currency,
+                  ),
+                  seasonName: state.currentSeason.labelRu,
                 ),
                 const SizedBox(height: 12),
                 const PlayHubCard(),
@@ -238,6 +248,7 @@ class CollectionScreen extends StatelessWidget {
                             context,
                             item: item,
                             currency: state.currency,
+                            seasonLabel: state.currentSeason.labelRu,
                           ),
                         ),
                       ),
@@ -339,12 +350,16 @@ class _VaultWorthHeader extends StatelessWidget {
     required this.streetCount,
     required this.totalLabel,
     required this.streetLabel,
+    required this.seasonLabel,
+    required this.seasonName,
   });
 
   final int count;
   final int streetCount;
   final String totalLabel;
   final String streetLabel;
+  final String seasonLabel;
+  final String seasonName;
 
   @override
   Widget build(BuildContext context) {
@@ -404,8 +419,19 @@ class _VaultWorthHeader extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Сезон $seasonName: $seasonLabel',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: VaultColors.purpleBright.withValues(alpha: 0.9),
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ),
           if (count != streetCount) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 6),
             Align(
               alignment: Alignment.centerLeft,
               child: Text(

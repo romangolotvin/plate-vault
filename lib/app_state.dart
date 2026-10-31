@@ -19,6 +19,7 @@ import 'data/ocr/plate_ocr_service.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/collection_repository.dart';
 import 'data/repositories/local_store.dart';
+import 'data/seasons/season.dart';
 import 'data/sets/plate_sets.dart';
 import 'data/sightings/sighting_service.dart';
 import 'data/streak/hunt_streak.dart';
@@ -61,6 +62,14 @@ class AppState extends ChangeNotifier {
   List<CollectionItem> publicFeed = [];
   List<UserProfile> publicProfiles = [];
   List<LeaderboardEntry> streetBoard = [];
+  List<LeaderboardEntry> seasonBoard = [];
+  Season currentSeason = Season.current();
+
+  /// Normalized plateId -> last capture epoch millis (Street cooldown).
+  Map<String, int> plateCooldowns = {};
+
+  /// Normalized plateId -> local complaint count.
+  Map<String, int> plateReports = {};
 
   DailyContractState? dailyState;
   HuntStreak huntStreak = const HuntStreak(current: 0, best: 0);
@@ -72,6 +81,49 @@ class AppState extends ChangeNotifier {
   UserProfile? get profile => authRepository.currentProfile;
   bool get isSignedIn => profile != null;
   HuntStreak get streakUi => huntStreak.resolved();
+
+  double get seasonWorthRub => leaderboardService.portfolioWorth(
+        collectionRepository.items,
+        kind: LeaderboardKind.street,
+        seasonId: currentSeason.id,
+      );
+
+  static const plateCooldown = Duration(hours: 12);
+
+  String? cooldownMessageFor({
+    required String countryCode,
+    required String rawText,
+  }) {
+    final id = SightingService.plateId(
+      countryCode: countryCode,
+      rawOrNormalized: rawText,
+    );
+    final last = plateCooldowns[id];
+    if (last == null) return null;
+    final elapsed = DateTime.now().millisecondsSinceEpoch - last;
+    final left = plateCooldown.inMilliseconds - elapsed;
+    if (left <= 0) return null;
+    final hours = (left / (1000 * 60 * 60)).ceil();
+    return 'Этот номер уже снимали недавно. Подождите ~$hours ч.';
+  }
+
+  int reportCountFor(CollectionItem item) {
+    final id = SightingService.plateId(
+      countryCode: item.countryCode,
+      rawOrNormalized: item.rawText,
+    );
+    return plateReports[id] ?? 0;
+  }
+
+  Future<void> reportPlate(CollectionItem item) async {
+    final id = SightingService.plateId(
+      countryCode: item.countryCode,
+      rawOrNormalized: item.rawText,
+    );
+    plateReports[id] = (plateReports[id] ?? 0) + 1;
+    await localStore.saveReports(plateReports);
+    notifyListeners();
+  }
 
   List<PlateSetProgress> get setProgress =>
       PlateSetsCatalog.progressFor(collectionRepository.items);
@@ -179,6 +231,9 @@ class AppState extends ChangeNotifier {
       currency = await localStore.loadCurrency();
       await _loadDailyState();
       await _loadSocialState();
+      plateCooldowns = await localStore.loadCooldowns();
+      plateReports = await localStore.loadReports();
+      currentSeason = Season.current();
       await refreshPublic();
       await refreshLeaderboards();
       await ensureWeeklyDuel();
@@ -194,6 +249,9 @@ class AppState extends ChangeNotifier {
       currency = await localStore.loadCurrency();
       await _loadDailyState();
       await _loadSocialState();
+      plateCooldowns = await localStore.loadCooldowns();
+      plateReports = await localStore.loadReports();
+      currentSeason = Season.current();
       cloudEnabled = false;
       await refreshLeaderboards();
       await ensureWeeklyDuel();
@@ -340,6 +398,13 @@ class AppState extends ChangeNotifier {
     CaptureSource captureSource = CaptureSource.liveCamera,
   }) async {
     final user = profile!;
+    final coolMsg = cooldownMessageFor(
+      countryCode: countryCode,
+      rawText: rawText,
+    );
+    if (coolMsg != null) {
+      throw StateError(coolMsg);
+    }
     final total = await sightingService.recordSighting(
       countryCode: countryCode,
       rawText: rawText,
@@ -360,6 +425,12 @@ class AppState extends ChangeNotifier {
       user.copyWith(itemCount: collectionRepository.items.length),
     );
     await tryCompleteDailyContract(item);
+    final pid = SightingService.plateId(
+      countryCode: countryCode,
+      rawOrNormalized: rawText,
+    );
+    plateCooldowns[pid] = DateTime.now().millisecondsSinceEpoch;
+    await localStore.saveCooldowns(plateCooldowns);
     if (item.isStreet) {
       await _recordStreetStreak();
       await _syncClanPortfolio();
@@ -566,12 +637,21 @@ class AppState extends ChangeNotifier {
     final byId = <String, CollectionItem>{
       for (final i in visible) i.id: i,
     };
+    currentSeason = Season.current();
     streetBoard = await leaderboardService.build(
       kind: LeaderboardKind.street,
       profiles: publicProfiles,
       allVisibleItems: byId.values.toList(),
       me: me,
       myItems: mine,
+    );
+    seasonBoard = await leaderboardService.build(
+      kind: LeaderboardKind.street,
+      profiles: publicProfiles,
+      allVisibleItems: byId.values.toList(),
+      me: me,
+      myItems: mine,
+      seasonId: currentSeason.id,
     );
     // Inject daily-contract flex bonus into local "me" row.
     if (me != null && dailyBonusRub > 0) {

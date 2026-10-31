@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../app_state.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/plate_card.dart';
+import '../../core/widgets/share_plate_card.dart';
 import '../../core/widgets/vault_page.dart';
 import '../museum/museum_section.dart';
 
@@ -124,7 +125,30 @@ class PublicScreen extends StatelessWidget {
             ...state.publicFeed.map(
               (item) => Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: PlateCard(item: item, showMeanings: true),
+                child: PlateCard(
+                  item: item,
+                  showMeanings: true,
+                  onShare: () => showSharePlateCard(
+                    context,
+                    item: item,
+                    currency: state.currency,
+                    seasonLabel: state.currentSeason.labelRu,
+                  ),
+                  onReport: () async {
+                    await state.reportPlate(item);
+                    if (!context.mounted) return;
+                    final n = state.reportCountFor(item);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          n == 1
+                              ? 'Жалоба сохранена локально'
+                              : 'Жалоб по номеру: $n',
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
           ],

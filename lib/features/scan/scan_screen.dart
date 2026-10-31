@@ -305,8 +305,6 @@ class _ScanScreenState extends State<ScanScreen>
 
   @override
   Widget build(BuildContext context) {
-    final t = Curves.easeOutCubic.transform(_enter.value);
-
     return VaultPage(
       appBar: AppBar(
         title: const Text('Street-скан'),
@@ -322,106 +320,117 @@ class _ScanScreenState extends State<ScanScreen>
       body: AnimatedBuilder(
         animation: _enter,
         builder: (context, _) {
+          // Must read animation value *inside* the builder — otherwise opacity
+          // sticks at 0 after the first frame and the whole tab looks empty.
+          final t = Curves.easeOutCubic.transform(_enter.value);
           return Opacity(
             opacity: t.clamp(0.0, 1.0),
             child: Transform.translate(
-              offset: Offset(0, (1 - t) * 24),
+              offset: Offset(0, (1 - t) * 18),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const DailyContractCard(compact: true),
-                    const SizedBox(height: 12),
                     Expanded(
-                      flex: 5,
-                      child: VaultHeroPanel(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              'ТОЛЬКО КАМЕРА',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelLarge
-                                  ?.copyWith(
-                                    color: VaultColors.purpleBright,
-                                    letterSpacing: 2.2,
+                      child: ListView(
+                        padding: EdgeInsets.zero,
+                        children: [
+                          const DailyContractCard(compact: true),
+                          const SizedBox(height: 12),
+                          VaultHeroPanel(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  'ТОЛЬКО КАМЕРА',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .labelLarge
+                                      ?.copyWith(
+                                        color: VaultColors.purpleBright,
+                                        letterSpacing: 2.2,
+                                      ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Два ракурса — Street',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w800,
+                                        color: VaultColors.cream,
+                                      ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Широкий кадр + крупный план. Без галереи и ручного ввода — доверие к улице.',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        color: VaultColors.mist,
+                                        height: 1.4,
+                                      ),
+                                ),
+                                const SizedBox(height: 22),
+                                const Center(
+                                  child: PlateBadge(
+                                    text: 'МЕР777178',
+                                    countryCode: 'RU',
+                                    compact: true,
                                   ),
+                                ),
+                                const SizedBox(height: 22),
+                                _AngleProgress(
+                                  wideDone: _widePath != null,
+                                  closeDone: _closePath != null,
+                                  active: _step,
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Два ракурса — Street',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                    color: VaultColors.cream,
+                          ),
+                          if (_widePath != null || _closePath != null) ...[
+                            const SizedBox(height: 14),
+                            SizedBox(
+                              height: 110,
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: _Thumb(
+                                      path: _widePath,
+                                      label: 'Широкий',
+                                    ),
                                   ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: _Thumb(
+                                      path: _closePath,
+                                      label: 'Крупный',
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                            const SizedBox(height: 8),
+                          ],
+                          if (_status != null) ...[
+                            const SizedBox(height: 12),
                             Text(
-                              'Широкий кадр + крупный план. Без галереи и ручного ввода — доверие к улице.',
+                              _status!,
                               style: Theme.of(context)
                                   .textTheme
                                   .bodyMedium
                                   ?.copyWith(
-                                    color: VaultColors.mist,
-                                    height: 1.4,
+                                    color: VaultColors.purpleBright,
+                                    height: 1.3,
                                   ),
                             ),
-                            const Spacer(),
-                            const Center(
-                              child: PlateBadge(
-                                text: 'МЕР777178',
-                                countryCode: 'RU',
-                                compact: true,
-                              ),
-                            ),
-                            const Spacer(),
-                            _AngleProgress(
-                              wideDone: _widePath != null,
-                              closeDone: _closePath != null,
-                              active: _step,
-                            ),
                           ],
-                        ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    if (_widePath != null || _closePath != null)
-                      Expanded(
-                        flex: 2,
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: _Thumb(
-                                path: _widePath,
-                                label: 'Широкий',
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _Thumb(
-                                path: _closePath,
-                                label: 'Крупный',
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    if (_status != null) ...[
-                      const SizedBox(height: 10),
-                      Text(
-                        _status!,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: VaultColors.purpleBright,
-                              height: 1.3,
-                            ),
-                      ),
-                    ],
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     VaultCta(
                       label: _step == _CaptureStep.close
                           ? 'Снимаем крупный план…'

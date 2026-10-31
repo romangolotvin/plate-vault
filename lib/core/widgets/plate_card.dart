@@ -25,6 +25,7 @@ class PlateCard extends StatelessWidget {
     this.onFavorite,
     this.onShowcase,
     this.onShare,
+    this.onReport,
     this.showMeanings = true,
   });
 
@@ -35,6 +36,7 @@ class PlateCard extends StatelessWidget {
   final VoidCallback? onFavorite;
   final VoidCallback? onShowcase;
   final VoidCallback? onShare;
+  final VoidCallback? onReport;
   final bool showMeanings;
 
   @override
@@ -111,6 +113,15 @@ class PlateCard extends StatelessWidget {
                           onPressed: onShare,
                           icon: Icon(
                             Icons.ios_share,
+                            color: VaultColors.mist.withValues(alpha: 0.85),
+                          ),
+                        ),
+                      if (onReport != null)
+                        IconButton(
+                          tooltip: 'Пожаловаться',
+                          onPressed: onReport,
+                          icon: Icon(
+                            Icons.flag_outlined,
                             color: VaultColors.mist.withValues(alpha: 0.85),
                           ),
                         ),
