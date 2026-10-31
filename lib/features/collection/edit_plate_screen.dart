@@ -299,7 +299,7 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
                 ),
               ),
               child: Text(
-                'Дубликат: такой номер уже в сейфе (${dup.rawText}). Можно сохранить ещё раз — достижение «Двойник» откроется.',
+                'Дубликат: такой номер уже в коллекции (${dup.rawText}). Можно сохранить ещё раз — достижение «Двойник» откроется.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: VaultColors.cream,
                     ),

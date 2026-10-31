@@ -106,7 +106,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   subtitle: Text(
                     profile.isLocalOnly
-                        ? 'Локальный сейф · Street-охотник'
+                        ? 'Локальный профиль · Street-охотник'
                         : (profile.email ?? profile.uid),
                     style: const TextStyle(color: VaultColors.mist),
                   ),

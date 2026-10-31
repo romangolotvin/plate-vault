@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../app_state.dart';
 import '../../core/theme.dart';
-import '../../core/widgets/plate_card.dart';
-import '../../core/widgets/share_plate_card.dart';
 import '../../core/widgets/vault_cta.dart';
 import '../../core/widgets/vault_page.dart';
 import '../../data/models/rarity.dart';
@@ -15,28 +12,26 @@ import '../encyclopedia/series_encyclopedia_screen.dart';
 import '../museum/museum_section.dart';
 import '../sets/sets_screen.dart';
 import '../social/play_hub_card.dart';
-import 'edit_plate_screen.dart';
 
+/// Home tab «Витрина»: музей лучших номеров + охотничий хаб (не вся коллекция).
 class CollectionScreen extends StatelessWidget {
   const CollectionScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final items = state.myItems;
-    final dateFmt = DateFormat.yMMMd('ru');
-    final totalLabel = PlateValuationEngine.instance.formatDetailed(
+    final streetLabel = PlateValuationEngine.instance.formatDetailed(
       PlateValuation(
-        amountRub: state.collectionWorthRub,
+        amountRub: state.streetWorthRub,
         rarityScore: 0,
         rarity: Rarity.common,
         rationale: '',
       ),
       state.currency,
     );
-    final streetLabel = PlateValuationEngine.instance.formatDetailed(
+    final seasonLabel = PlateValuationEngine.instance.formatDetailed(
       PlateValuation(
-        amountRub: state.streetWorthRub,
+        amountRub: state.seasonWorthRub,
         rarityScore: 0,
         rarity: Rarity.common,
         rationale: '',
@@ -47,7 +42,7 @@ class CollectionScreen extends StatelessWidget {
 
     return VaultPage(
       appBar: AppBar(
-        title: const Text('Моя коллекция'),
+        title: const Text('Витрина'),
         actions: [
           IconButton(
             tooltip: 'Энциклопедия серий',
@@ -77,186 +72,32 @@ class CollectionScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Column(
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
         children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-              children: [
-                _VaultWorthHeader(
-                  count: state.collectionRepository.items.length,
-                  streetCount: state.streetCount,
-                  totalLabel: totalLabel,
-                  streetLabel: streetLabel,
-                  seasonLabel: PlateValuationEngine.instance.formatDetailed(
-                    PlateValuation(
-                      amountRub: state.seasonWorthRub,
-                      rarityScore: 0,
-                      rarity: Rarity.common,
-                      rationale: '',
-                    ),
-                    state.currency,
-                  ),
-                  seasonName: state.currentSeason.labelRu,
-                ),
-                const SizedBox(height: 12),
-                const PlayHubCard(),
-                const SizedBox(height: 12),
-                const DailyContractCard(),
-                const SizedBox(height: 12),
-                const SetsTeaserCard(),
-                const SizedBox(height: 12),
-                MuseumSection(items: state.collectionRepository.items),
-                const SizedBox(height: 14),
-                TextField(
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.search, color: VaultColors.mist),
-                    hintText: 'Поиск по номеру или серии',
-                  ),
-                  onChanged: (v) => state.setFilters(query: v),
-                ),
-                const SizedBox(height: 10),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _SortChip(
-                        label: 'Новые',
-                        selected: state.sort == CollectionSort.newest,
-                        onTap: () =>
-                            state.setFilters(sortBy: CollectionSort.newest),
-                      ),
-                      const SizedBox(width: 8),
-                      _SortChip(
-                        label: 'По цене',
-                        selected: state.sort == CollectionSort.valueDesc,
-                        onTap: () => state.setFilters(
-                            sortBy: CollectionSort.valueDesc),
-                      ),
-                      const SizedBox(width: 8),
-                      _SortChip(
-                        label: 'Street↑',
-                        selected: state.sort == CollectionSort.streetFirst,
-                        onTap: () => state.setFilters(
-                            sortBy: CollectionSort.streetFirst),
-                      ),
-                      const SizedBox(width: 8),
-                      _SortChip(
-                        label: 'Редкость',
-                        selected: state.sort == CollectionSort.rarityDesc,
-                        onTap: () => state.setFilters(
-                            sortBy: CollectionSort.rarityDesc),
-                      ),
-                      const SizedBox(width: 8),
-                      FilterChip(
-                        selected: state.trustFilter == TrustFilter.street,
-                        label: const Text('Street'),
-                        onSelected: (v) => state.setFilters(
-                          trust: v ? TrustFilter.street : TrustFilter.all,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      FilterChip(
-                        selected: state.favoritesOnly,
-                        label: const Text('★'),
-                        onSelected: (v) => state.setFilters(favOnly: v),
-                      ),
-                      const SizedBox(width: 8),
-                      FilterChip(
-                        selected: state.showcaseOnly,
-                        label: const Text('Музей'),
-                        onSelected: (v) => state.setFilters(showOnly: v),
-                      ),
-                      const SizedBox(width: 8),
-                      FilterChip(
-                        label: Text(
-                          state.countryFilter.isEmpty
-                              ? 'Страна: все'
-                              : 'Страна: ${state.countryFilter}',
-                        ),
-                        onSelected: (_) => _pickCountry(context, state),
-                      ),
-                      const SizedBox(width: 8),
-                      ...Rarity.values.map((r) {
-                        final selected = state.rarityFilter == r;
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: FilterChip(
-                            selected: selected,
-                            label: Text(r.labelRu),
-                            onSelected: (v) {
-                              if (v) {
-                                state.setFilters(rarity: r);
-                              } else {
-                                state.setFilters(clearRarity: true);
-                              }
-                            },
-                          ),
-                        );
-                      }),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                if (items.isEmpty)
-                  const SizedBox(height: 320, child: _EmptyVault())
-                else
-                  ...List.generate(items.length, (index) {
-                    final item = items[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: TweenAnimationBuilder<double>(
-                        key: ValueKey(item.id),
-                        tween: Tween(begin: 0.94, end: 1),
-                        duration:
-                            Duration(milliseconds: 280 + (index % 5) * 40),
-                        curve: Curves.easeOutBack,
-                        builder: (context, scale, child) =>
-                            Transform.scale(scale: scale, child: child),
-                        child: PlateCard(
-                          item: item,
-                          subtitle: dateFmt.format(item.createdAt),
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) =>
-                                    EditPlateScreen(existing: item),
-                              ),
-                            );
-                          },
-                          onDelete: () => state.deletePlate(item.id),
-                          onFavorite: () => state.toggleFavorite(item),
-                          onShowcase: () async {
-                            final before = item.isShowcase;
-                            await state.toggleShowcase(item);
-                            if (!context.mounted) return;
-                            if (!before &&
-                                !state.collectionRepository.items
-                                    .any((e) =>
-                                        e.id == item.id && e.isShowcase)) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Музей: максимум 6 Street-номеров на витрине '
-                                    '(или номер не Street).',
-                                  ),
-                                ),
-                              );
-                            }
-                          },
-                          onShare: () => showSharePlateCard(
-                            context,
-                            item: item,
-                            currency: state.currency,
-                            seasonLabel: state.currentSeason.labelRu,
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
-              ],
-            ),
+          _VitrinaWorthHeader(
+            streetCount: state.streetCount,
+            streetLabel: streetLabel,
+            seasonLabel: seasonLabel,
+            seasonName: state.currentSeason.labelRu,
           ),
+          const SizedBox(height: 12),
+          const PlayHubCard(),
+          const SizedBox(height: 12),
+          const DailyContractCard(),
+          const SizedBox(height: 12),
+          const SetsTeaserCard(),
+          const SizedBox(height: 12),
+          MuseumSection(
+            items: state.collectionRepository.items,
+            title: 'Витрина',
+            subtitle:
+                'До 6 лучших Street-номеров. Полная коллекция — во вкладке «Профиль».',
+          ),
+          if (state.collectionRepository.items.isEmpty) ...[
+            const SizedBox(height: 16),
+            const _EmptyVitrina(),
+          ],
         ],
       ),
     );
@@ -301,62 +142,17 @@ class CollectionScreen extends StatelessWidget {
       },
     );
   }
-
-  Future<void> _pickCountry(BuildContext context, AppState state) async {
-    final countries = {
-      '',
-      'RU',
-      'BY',
-      'KZ',
-      'UA',
-      'US',
-      'DE',
-      'FR',
-      'PL',
-      'GB',
-      'IT',
-      'ES',
-      'TR',
-      'CN',
-      'JP',
-      'XX',
-    };
-    final selected = await showModalBottomSheet<String>(
-      context: context,
-      builder: (context) {
-        return SafeArea(
-          child: ListView(
-            children: countries
-                .map(
-                  (c) => ListTile(
-                    title: Text(c.isEmpty ? 'Все страны' : c),
-                    onTap: () => Navigator.pop(context, c),
-                  ),
-                )
-                .toList(),
-          ),
-        );
-      },
-    );
-    if (selected != null) {
-      state.setFilters(country: selected);
-    }
-  }
 }
 
-class _VaultWorthHeader extends StatelessWidget {
-  const _VaultWorthHeader({
-    required this.count,
+class _VitrinaWorthHeader extends StatelessWidget {
+  const _VitrinaWorthHeader({
     required this.streetCount,
-    required this.totalLabel,
     required this.streetLabel,
     required this.seasonLabel,
     required this.seasonName,
   });
 
-  final int count;
   final int streetCount;
-  final String totalLabel;
   final String streetLabel;
   final String seasonLabel;
   final String seasonName;
@@ -383,7 +179,7 @@ class _VaultWorthHeader extends StatelessWidget {
                     color: VaultColors.purpleBright.withValues(alpha: 0.5),
                   ),
                 ),
-                child: const Icon(Icons.savings_outlined,
+                child: const Icon(Icons.storefront_outlined,
                     color: VaultColors.purpleBright),
               ),
               const SizedBox(width: 14),
@@ -392,7 +188,7 @@ class _VaultWorthHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Street-сейф',
+                      'Street-витрина',
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                             color: VaultColors.mist,
                             letterSpacing: 0.6,
@@ -430,100 +226,56 @@ class _VaultWorthHeader extends StatelessWidget {
                   ),
             ),
           ),
-          if (count != streetCount) ...[
-            const SizedBox(height: 6),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Всего в сейфе: $totalLabel · $count',
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: VaultColors.mist.withValues(alpha: 0.85),
-                    ),
-              ),
-            ),
-          ],
         ],
       ),
     );
   }
 }
 
-class _SortChip extends StatelessWidget {
-  const _SortChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
+class _EmptyVitrina extends StatelessWidget {
+  const _EmptyVitrina();
 
   @override
   Widget build(BuildContext context) {
-    return FilterChip(
-      selected: selected,
-      label: Text(label),
-      onSelected: (_) => onTap(),
-      selectedColor: VaultColors.purple.withValues(alpha: 0.32),
-    );
-  }
-}
-
-class _EmptyVault extends StatelessWidget {
-  const _EmptyVault();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: VaultHeroPanel(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0.85, end: 1),
-              duration: const Duration(milliseconds: 800),
-              curve: Curves.easeOutBack,
-              builder: (context, s, child) =>
-                  Transform.scale(scale: s, child: child),
-              child: Icon(
-                Icons.photo_camera_rounded,
-                size: 64,
-                color: VaultColors.purpleBright.withValues(alpha: 0.85),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Сейф пуст',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: VaultColors.cream,
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Открой вкладку «Скан» и сними номер двумя ракурсами — только так номер попадает в Street.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: VaultColors.mist,
-                    height: 1.4,
-                  ),
-            ),
-            const SizedBox(height: 22),
-            VaultCta(
-              label: 'Перейти к скану',
-              icon: Icons.arrow_forward_rounded,
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Нижняя панель → «Скан» → два ракурса'),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
+    return VaultHeroPanel(
+      child: Column(
+        children: [
+          Icon(
+            Icons.photo_camera_rounded,
+            size: 56,
+            color: VaultColors.purpleBright.withValues(alpha: 0.85),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Витрина пока пуста',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: VaultColors.cream,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Сними номер двумя ракурсами на вкладке «Скан» — он попадёт '
+            'в коллекцию профиля, а лучшие окажутся здесь.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: VaultColors.mist,
+                  height: 1.4,
+                ),
+          ),
+          const SizedBox(height: 18),
+          VaultCta(
+            label: 'Как снимать',
+            icon: Icons.arrow_forward_rounded,
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Нижняя панель → «Скан» → два ракурса'),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }

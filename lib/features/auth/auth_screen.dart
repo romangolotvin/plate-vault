@@ -61,13 +61,13 @@ class _AuthScreenState extends State<AuthScreen>
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final t = Curves.easeOutCubic.transform(_enter.value);
 
     return VaultScaffold(
       body: SafeArea(
         child: AnimatedBuilder(
           animation: _enter,
           builder: (context, _) {
+            final t = Curves.easeOutCubic.transform(_enter.value);
             return Opacity(
               opacity: t.clamp(0.0, 1.0),
               child: Transform.translate(
@@ -93,7 +93,7 @@ class _AuthScreenState extends State<AuthScreen>
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Охоться за сериями на улице. Два ракурса камерой — Street в сейфе.',
+                      'Охоться за сериями на улице. Два ракурса камерой — Street в коллекции.',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                             color: VaultColors.mist,
                             height: 1.4,
@@ -115,7 +115,7 @@ class _AuthScreenState extends State<AuthScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Локальный сейф',
+                              'Локальный профиль',
                               style: Theme.of(context)
                                   .textTheme
                                   .titleLarge
@@ -144,7 +144,7 @@ class _AuthScreenState extends State<AuthScreen>
                             ),
                             const SizedBox(height: 16),
                             VaultCta(
-                              label: 'Открыть сейф',
+                              label: 'Войти в коллекцию',
                               icon: Icons.lock_open_rounded,
                               busy: _busy,
                               onPressed: _busy

@@ -15,9 +15,9 @@ class MuseumSection extends StatelessWidget {
   const MuseumSection({
     super.key,
     required this.items,
-    this.title = 'Музей',
+    this.title = 'Витрина',
     this.subtitle =
-        'До 6 лучших Street-номеров на витрине профиля. Сначала вручную отмеченные, затем по цене.',
+        'До 6 лучших Street-номеров. Сначала вручную отмеченные, затем по цене.',
     this.editable = true,
   });
 
@@ -78,8 +78,8 @@ class MuseumSection extends StatelessWidget {
                 ),
               ),
               child: Text(
-                'Музей пуст. Сними Street-номер двумя ракурсами — лучшие '
-                'автоматически попадут на витрину. Можно вручную отметить «На витрину» '
+                'Витрина пуста. Сними Street-номер двумя ракурсами — лучшие '
+                'попадут сюда. Можно отметить «На витрину» в профиле '
                 '(макс. ${MuseumPicker.defaultMax}).',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: VaultColors.mist,

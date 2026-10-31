@@ -7,9 +7,9 @@ import 'core/widgets/vault_scaffold.dart';
 import 'features/auth/auth_screen.dart';
 import 'features/collection/collection_screen.dart';
 import 'features/leaderboard/leaderboard_screen.dart';
+import 'features/profile/profile_screen.dart';
 import 'features/public/public_screen.dart';
 import 'features/scan/scan_screen.dart';
-import 'features/settings/settings_screen.dart';
 
 class PlateVaultApp extends StatelessWidget {
   const PlateVaultApp({super.key});
@@ -72,67 +72,33 @@ class HomeShell extends StatefulWidget {
   State<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> with TickerProviderStateMixin {
+class _HomeShellState extends State<HomeShell> {
   int _index = 0;
-  late final AnimationController _tabSpring;
 
   static const _pages = [
     CollectionScreen(),
     ScanScreen(),
     LeaderboardScreen(),
     PublicScreen(),
-    SettingsScreen(),
+    ProfileScreen(isTab: true),
   ];
 
   @override
-  void initState() {
-    super.initState();
-    _tabSpring = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 420),
-    )..value = 1;
-  }
-
-  @override
-  void dispose() {
-    _tabSpring.dispose();
-    super.dispose();
-  }
-
-  void _select(int i) {
-    if (i == _index) return;
-    setState(() => _index = i);
-    _tabSpring
-      ..value = 0
-      ..animateTo(1, curve: Curves.easeOutBack);
-  }
-
-  @override
   Widget build(BuildContext context) {
+    // No Opacity fade on tab switch — it was sticking at 0 and showing a blank
+    // (white-looking) screen on Витрина / other tabs.
     return VaultScaffold(
-      body: AnimatedBuilder(
-        animation: _tabSpring,
-        builder: (context, _) {
-          final t = Curves.easeOutBack.transform(_tabSpring.value);
-          return Transform.translate(
-            offset: Offset(0, (1 - t) * 18),
-            child: Opacity(
-              opacity: t.clamp(0.0, 1.0),
-              child: IndexedStack(index: _index, children: _pages),
-            ),
-          );
-        },
-      ),
+      body: IndexedStack(index: _index, children: _pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
-        onDestinationSelected: _select,
+        onDestinationSelected: (i) => setState(() => _index = i),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         height: 68,
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.collections_bookmark_outlined),
-            selectedIcon: Icon(Icons.collections_bookmark),
-            label: 'Сейф',
+            icon: Icon(Icons.storefront_outlined),
+            selectedIcon: Icon(Icons.storefront),
+            label: 'Витрина',
           ),
           NavigationDestination(
             icon: Icon(Icons.photo_camera_outlined),
@@ -150,9 +116,9 @@ class _HomeShellState extends State<HomeShell> with TickerProviderStateMixin {
             label: 'Мир',
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Ещё',
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Профиль',
           ),
         ],
       ),

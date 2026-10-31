@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../app_state.dart';
+import '../../core/country_flag.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/plate_card.dart';
 import '../../core/widgets/share_plate_card.dart';
 import '../../core/widgets/vault_page.dart';
 import '../museum/museum_section.dart';
+import '../profile/profile_screen.dart';
 
 class PublicScreen extends StatelessWidget {
   const PublicScreen({super.key});
@@ -66,9 +68,9 @@ class PublicScreen extends StatelessWidget {
               const SizedBox(height: 16),
               MuseumSection(
                 items: state.collectionRepository.items,
-                title: 'Мой музей',
+                title: 'Моя витрина',
                 subtitle:
-                    'Публичная витрина: до 6 лучших Street. Отмечай «На витрину» в коллекции.',
+                    'Публично: до 6 лучших Street. Отмечай «На витрину» в профиле.',
               ),
             ],
             const SizedBox(height: 18),
@@ -93,16 +95,27 @@ class PublicScreen extends StatelessWidget {
                 child: ListTile(
                   leading: CircleAvatar(
                     backgroundColor: VaultColors.slate,
-                    child: Icon(
-                      Icons.person,
-                      color: VaultColors.gold.withValues(alpha: 0.9),
+                    child: Text(
+                      countryFlagEmoji(p.countryCode),
+                      style: const TextStyle(fontSize: 20),
                     ),
                   ),
                   title: Text(p.displayName),
                   subtitle: Text(
-                    p.bio.isEmpty ? '${p.itemCount} номеров' : p.bio,
+                    p.bio.isEmpty
+                        ? '${p.itemCount} номеров · с ${p.registeredYear}'
+                        : p.bio,
                     style: const TextStyle(color: VaultColors.mist),
                   ),
+                  trailing: const Icon(Icons.chevron_right,
+                      color: VaultColors.mist),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => ProfileScreen(profile: p),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
