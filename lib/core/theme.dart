@@ -178,10 +178,12 @@ class AppTheme {
         backgroundColor: VaultColors.navy.withValues(alpha: 0.97),
         indicatorColor: VaultColors.purple.withValues(alpha: 0.28),
         elevation: 0,
-        height: 72,
+        height: 68,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
-          return textTheme.labelMedium?.copyWith(
+          return TextStyle(
+            fontSize: 11,
+            height: 1.05,
             color: selected ? VaultColors.purpleBright : VaultColors.mist,
             fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
           );
@@ -190,7 +192,7 @@ class AppTheme {
           final selected = states.contains(WidgetState.selected);
           return IconThemeData(
             color: selected ? VaultColors.purpleBright : VaultColors.mist,
-            size: selected ? 26 : 24,
+            size: selected ? 24 : 22,
           );
         }),
       ),

@@ -14,6 +14,7 @@ import '../daily/daily_contract_card.dart';
 import '../encyclopedia/series_encyclopedia_screen.dart';
 import '../museum/museum_section.dart';
 import '../sets/sets_screen.dart';
+import '../social/play_hub_card.dart';
 import 'edit_plate_screen.dart';
 
 class CollectionScreen extends StatelessWidget {
@@ -88,6 +89,8 @@ class CollectionScreen extends StatelessWidget {
                   totalLabel: totalLabel,
                   streetLabel: streetLabel,
                 ),
+                const SizedBox(height: 12),
+                const PlayHubCard(),
                 const SizedBox(height: 12),
                 const DailyContractCard(),
                 const SizedBox(height: 12),

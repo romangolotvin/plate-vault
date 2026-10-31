@@ -18,6 +18,10 @@ class LocalStore {
   static const _dailyCompletedKey = 'daily_contract_completed_day_v1';
   static const _dailyBonusKey = 'daily_contract_lifetime_bonus_v1';
   static const _dailyBadgesKey = 'daily_contract_badges_v1';
+  static const _streakKey = 'hunt_streak_v1';
+  static const _duelKey = 'weekly_duel_v1';
+  static const _clanKey = 'my_clan_v1';
+  static const _clansDirKey = 'known_clans_v1';
 
   Future<List<CollectionItem>> loadItems() async {
     final prefs = await SharedPreferences.getInstance();
@@ -143,5 +147,46 @@ class LocalStore {
   Future<void> saveDailyBadges(List<String> badges) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_dailyBadgesKey, badges);
+  }
+
+  Future<Map<String, dynamic>?> loadJsonMap(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(key);
+    if (raw == null || raw.isEmpty) return null;
+    return jsonDecode(raw) as Map<String, dynamic>;
+  }
+
+  Future<void> saveJsonMap(String key, Map<String, dynamic> value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(key, jsonEncode(value));
+  }
+
+  Future<Map<String, dynamic>?> loadStreakJson() => loadJsonMap(_streakKey);
+  Future<void> saveStreakJson(Map<String, dynamic> json) =>
+      saveJsonMap(_streakKey, json);
+
+  Future<Map<String, dynamic>?> loadDuelJson() => loadJsonMap(_duelKey);
+  Future<void> saveDuelJson(Map<String, dynamic> json) =>
+      saveJsonMap(_duelKey, json);
+
+  Future<Map<String, dynamic>?> loadClanJson() => loadJsonMap(_clanKey);
+  Future<void> saveClanJson(Map<String, dynamic> json) =>
+      saveJsonMap(_clanKey, json);
+  Future<void> clearClan() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_clanKey);
+  }
+
+  Future<List<Map<String, dynamic>>> loadKnownClans() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_clansDirKey);
+    if (raw == null || raw.isEmpty) return [];
+    final list = jsonDecode(raw) as List<dynamic>;
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  Future<void> saveKnownClans(List<Map<String, dynamic>> clans) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_clansDirKey, jsonEncode(clans));
   }
 }

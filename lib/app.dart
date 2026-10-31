@@ -126,11 +126,13 @@ class _HomeShellState extends State<HomeShell> with TickerProviderStateMixin {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: _select,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        height: 68,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.collections_bookmark_outlined),
             selectedIcon: Icon(Icons.collections_bookmark),
-            label: 'Коллекция',
+            label: 'Сейф',
           ),
           NavigationDestination(
             icon: Icon(Icons.photo_camera_outlined),
@@ -140,17 +142,17 @@ class _HomeShellState extends State<HomeShell> with TickerProviderStateMixin {
           NavigationDestination(
             icon: Icon(Icons.emoji_events_outlined),
             selectedIcon: Icon(Icons.emoji_events),
-            label: 'Рейтинг',
+            label: 'Топ',
           ),
           NavigationDestination(
             icon: Icon(Icons.public_outlined),
             selectedIcon: Icon(Icons.public),
-            label: 'Публичные',
+            label: 'Мир',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
             selectedIcon: Icon(Icons.settings),
-            label: 'Настройки',
+            label: 'Ещё',
           ),
         ],
       ),

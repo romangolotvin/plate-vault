@@ -6,7 +6,9 @@ import 'package:flutter/material.dart';
 
 import 'core/update/update_service.dart';
 import 'data/achievements/achievements.dart';
+import 'data/clans/clan_models.dart';
 import 'data/daily/daily_contract.dart';
+import 'data/duel/weekly_duel.dart';
 import 'data/leaderboard/leaderboard_service.dart';
 import 'data/models/collection_item.dart';
 import 'data/models/rarity.dart';
@@ -19,6 +21,7 @@ import 'data/repositories/collection_repository.dart';
 import 'data/repositories/local_store.dart';
 import 'data/sets/plate_sets.dart';
 import 'data/sightings/sighting_service.dart';
+import 'data/streak/hunt_streak.dart';
 import 'data/valuation/currency.dart';
 import 'data/valuation/plate_valuation_engine.dart';
 import 'firebase_options.dart';
@@ -60,9 +63,15 @@ class AppState extends ChangeNotifier {
   List<LeaderboardEntry> streetBoard = [];
 
   DailyContractState? dailyState;
+  HuntStreak huntStreak = const HuntStreak(current: 0, best: 0);
+  WeeklyDuel? weeklyDuel;
+  Clan? myClan;
+  final _duelMatcher = const DuelMatcher();
+  final _clanService = ClanService();
 
   UserProfile? get profile => authRepository.currentProfile;
   bool get isSignedIn => profile != null;
+  HuntStreak get streakUi => huntStreak.resolved();
 
   List<PlateSetProgress> get setProgress =>
       PlateSetsCatalog.progressFor(collectionRepository.items);
@@ -169,8 +178,10 @@ class AppState extends ChangeNotifier {
       await authRepository.restoreSession();
       currency = await localStore.loadCurrency();
       await _loadDailyState();
+      await _loadSocialState();
       await refreshPublic();
       await refreshLeaderboards();
+      await ensureWeeklyDuel();
     } catch (e, st) {
       bootError = '$e';
       debugPrint('AppState.init failed: $e\n$st');
@@ -182,8 +193,10 @@ class AppState extends ChangeNotifier {
       await authRepository.restoreSession();
       currency = await localStore.loadCurrency();
       await _loadDailyState();
+      await _loadSocialState();
       cloudEnabled = false;
       await refreshLeaderboards();
+      await ensureWeeklyDuel();
     } finally {
       ready = true;
       notifyListeners();
@@ -347,9 +360,124 @@ class AppState extends ChangeNotifier {
       user.copyWith(itemCount: collectionRepository.items.length),
     );
     await tryCompleteDailyContract(item);
+    if (item.isStreet) {
+      await _recordStreetStreak();
+      await _syncClanPortfolio();
+      await ensureWeeklyDuel(forceRefreshPortfolio: true);
+    }
     await refreshLeaderboards();
     notifyListeners();
     return item;
+  }
+
+  Future<void> _loadSocialState() async {
+    huntStreak = HuntStreak.fromJson(await localStore.loadStreakJson()).resolved();
+    final duelJson = await localStore.loadDuelJson();
+    if (duelJson != null) {
+      weeklyDuel = WeeklyDuel.fromJson(duelJson);
+    }
+    final clanJson = await localStore.loadClanJson();
+    if (clanJson != null) {
+      myClan = Clan.fromJson(clanJson);
+    }
+  }
+
+  Future<void> _recordStreetStreak() async {
+    huntStreak = huntStreak.recordStreetSave();
+    await localStore.saveStreakJson(huntStreak.toJson());
+    notifyListeners();
+  }
+
+  Future<void> ensureWeeklyDuel({bool forceRefreshPortfolio = false}) async {
+    final me = profile;
+    if (me == null) return;
+    final week = duelWeekId();
+    final mine = streetWorthRub + dailyBonusRub;
+    if (weeklyDuel == null ||
+        weeklyDuel!.weekId != week ||
+        forceRefreshPortfolio) {
+      if (weeklyDuel != null &&
+          weeklyDuel!.weekId == week &&
+          forceRefreshPortfolio) {
+        weeklyDuel = weeklyDuel!.withMyPortfolio(mine);
+      } else {
+        weeklyDuel = _duelMatcher.match(
+          myUserId: me.uid,
+          myPortfolioRub: mine,
+          board: streetBoard,
+        );
+      }
+      await localStore.saveDuelJson(weeklyDuel!.toJson());
+      notifyListeners();
+    }
+  }
+
+  Future<Clan> createClan(String name) async {
+    final me = profile!;
+    final clan = _clanService.create(
+      clanName: name,
+      ownerId: me.uid,
+      ownerName: me.displayName,
+      ownerStreetRub: streetWorthRub + dailyBonusRub,
+    );
+    myClan = clan;
+    await localStore.saveClanJson(clan.toJson());
+    final known = await localStore.loadKnownClans();
+    known.removeWhere((e) => e['id'] == clan.id);
+    known.add(clan.toJson());
+    await localStore.saveKnownClans(known);
+    notifyListeners();
+    return clan;
+  }
+
+  Future<Clan?> joinClan(String inviteCode) async {
+    final me = profile!;
+    final known = await localStore.loadKnownClans();
+    final clans = known.map(Clan.fromJson).toList();
+    final joined = _clanService.join(
+      knownClans: clans,
+      inviteCode: inviteCode,
+      userId: me.uid,
+      displayName: me.displayName,
+      streetRub: streetWorthRub + dailyBonusRub,
+    );
+    if (joined == null) return null;
+    myClan = joined;
+    await localStore.saveClanJson(joined.toJson());
+    final idx = known.indexWhere((e) => e['id'] == joined.id);
+    if (idx >= 0) {
+      known[idx] = joined.toJson();
+    } else {
+      known.add(joined.toJson());
+    }
+    await localStore.saveKnownClans(known);
+    notifyListeners();
+    return joined;
+  }
+
+  Future<void> leaveClan() async {
+    myClan = null;
+    await localStore.clearClan();
+    notifyListeners();
+  }
+
+  Future<void> _syncClanPortfolio() async {
+    final me = profile;
+    final clan = myClan;
+    if (me == null || clan == null) return;
+    final updated = _clanService.refreshMemberPortfolio(
+      clan,
+      me.uid,
+      streetWorthRub + dailyBonusRub,
+    );
+    myClan = updated;
+    await localStore.saveClanJson(updated.toJson());
+    final known = await localStore.loadKnownClans();
+    final idx = known.indexWhere((e) => e['id'] == updated.id);
+    if (idx >= 0) {
+      known[idx] = updated.toJson();
+      await localStore.saveKnownClans(known);
+    }
   }
 
   CollectionItem? findDuplicate({
