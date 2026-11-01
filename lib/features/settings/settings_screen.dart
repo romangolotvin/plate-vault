@@ -236,7 +236,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: const Text('Проверить обновления'),
                   subtitle: Text(
                     Platform.isIOS
-                        ? 'iOS: App Store (заглушка)'
+                        ? (AppConstants.isAppStoreConfigured
+                            ? 'iOS: открыть страницу в App Store'
+                            : 'iOS: страница релиза на GitHub (до App Store)')
                         : 'Android: скачивание APK внутри приложения, без браузера',
                     style: const TextStyle(color: VaultColors.mist),
                   ),
@@ -308,7 +310,11 @@ class _UpdateDialogState extends State<_UpdateDialog> {
       _busy = true;
       _error = null;
       _progress = Platform.isAndroid ? 0 : null;
-      _status = Platform.isAndroid ? 'Скачиваем APK…' : 'Открываем Store…';
+      _status = Platform.isAndroid
+          ? 'Скачиваем APK…'
+          : (AppConstants.isAppStoreConfigured
+              ? 'Открываем App Store…'
+              : 'Открываем GitHub Releases…');
     });
     try {
       if (Platform.isIOS) {
@@ -377,7 +383,9 @@ class _UpdateDialogState extends State<_UpdateDialog> {
             Text(
               Platform.isAndroid
                   ? 'APK скачается внутри приложения и откроется установщик Android. Браузер не нужен.'
-                  : 'На iOS обновление через App Store (sideload недоступен).',
+                  : (AppConstants.isAppStoreConfigured
+                      ? 'На iOS обновление ставится через App Store.'
+                      : 'На iOS откроется страница релиза на GitHub — IPA для TestFlight / Mac-сборки.'),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: VaultColors.mist,
                     height: 1.35,
@@ -441,7 +449,11 @@ class _UpdateDialogState extends State<_UpdateDialog> {
         FilledButton(
           onPressed: _busy ? null : _confirm,
           child: Text(
-            Platform.isAndroid ? 'Да, обновить' : 'Открыть Store',
+            Platform.isAndroid
+                ? 'Да, обновить'
+                : (AppConstants.isAppStoreConfigured
+                    ? 'Открыть App Store'
+                    : 'Открыть GitHub'),
           ),
         ),
       ],

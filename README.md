@@ -23,6 +23,19 @@ Two boards: **Street** (verified only) and **Неквалифицированн�
 **Настройки → Проверить обновления** → download with progress → FileProvider install.  
 Needs `REQUEST_INSTALL_PACKAGES`. No browser.
 
+## iOS
+
+Сборка IPA только на **macOS + Xcode**. Подробно: [docs/IOS.md](docs/IOS.md).
+
+```bash
+flutter pub get
+open ios/Runner.xcworkspace   # выберите Team (Signing)
+./build-ipa.sh                # → build/ios-dist/plate-vault-release.ipa
+```
+
+CI: `.github/workflows/ios.yml` собирает unsigned `.app` zip на `macos-latest` (проверка компиляции).  
+До App Store кнопка обновлений на iOS открывает GitHub Releases.
+
 ## Paths (E: toolchain)
 
 | What | Path |
@@ -32,6 +45,7 @@ Needs `REQUEST_INSTALL_PACKAGES`. No browser.
 | Pub cache | `E:\dev\pub-cache` |
 | Gradle | `E:\dev\gradle` |
 | Release APK | `E:\dev\builds\plate-vault-release.apk` |
+| Release IPA (Mac) | `build/ios-dist/plate-vault-release.ipa` |
 
 ```powershell
 $env:Path = "E:\dev\flutter\bin;$env:Path"
@@ -67,4 +81,4 @@ lib/
   features/       collection, scan, leaderboard, public, settings
 ```
 
-See also: [docs/PLATE_FONTS.md](docs/PLATE_FONTS.md), [docs/STORE.md](docs/STORE.md).
+See also: [docs/IOS.md](docs/IOS.md), [docs/PLATE_FONTS.md](docs/PLATE_FONTS.md), [docs/STORE.md](docs/STORE.md).
