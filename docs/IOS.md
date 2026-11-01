@@ -19,15 +19,36 @@ IPA **нельзя** собрать на Windows/Linux — нужен macOS + Xc
    ```bash
    flutter doctor
    ```
-   В списке должны быть галочки у **Xcode** и желательно **CocoaPods** (если doctor просит — поставь).
-4. Клонируй/открой проект и подтяни зависимости:
+   В списке должны быть галочки у **Xcode** и **CocoaPods**  
+   (если нет pods: `brew install cocoapods` или `sudo gem install cocoapods`).
+4. Клонируй/открой проект и **обязательно** подготовь iOS (не открывай Xcode раньше):
    ```bash
-   cd plate-vault
-   flutter pub get
-   cd ios
-   pod install   # если команды нет: sudo gem install cocoapods
-   cd ..
+   cd ~/dev/plate-vault
+   git pull
+   chmod +x tool/ios_prepare.sh
+   ./tool/ios_prepare.sh
    ```
+   Скрипт сделает `flutter clean` → `pub get` → `pod install` → откроет workspace.
+
+   Вручную то же самое:
+   ```bash
+   flutter clean && flutter pub get
+   cd ios && pod install && cd ..
+   open ios/Runner.xcworkspace
+   ```
+
+### Ошибка `Missing package product FlutterGeneratedPluginSwiftPackage`
+
+Проект переведён на **CocoaPods** (SwiftPM выключен в `pubspec.yaml`).  
+Если видишь эту ошибку — ты на старом checkout или открыл Xcode до `pod install`:
+
+```bash
+cd ~/dev/plate-vault
+git pull origin cursor/ios-version-76f1
+./tool/ios_prepare.sh
+```
+
+В Xcode: **File → Close Workspace**, затем снова открой **`ios/Runner.xcworkspace`** (не `.xcodeproj`).
 
 ### 1. Открой правильный файл в Xcode
 

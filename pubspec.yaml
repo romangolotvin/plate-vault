@@ -32,4 +32,8 @@ dev_dependencies:
   flutter_lints: ^6.0.0
 
 flutter:
+  config:
+    # CocoaPods is more reliable here (Firebase + ML Kit). Avoids Xcode
+    # "Missing package product FlutterGeneratedPluginSwiftPackage".
+    enable-swift-package-manager: false
   uses-material-design: true
