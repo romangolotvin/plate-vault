@@ -32,12 +32,16 @@
 
 1. Создайте App ID `com.platevault.app` в Apple Developer.
 2. Создайте приложение в App Store Connect.
-3. Privacy Nutrition Labels + usage strings уже в `ios/Runner/Info.plist`.
-4. Соберите на macOS:
+3. Privacy Nutrition Labels + usage strings уже в `ios/Runner/Info.plist` (см. также [IOS.md](IOS.md)).
+4. В Xcode выберите Team для `ios/Runner.xcworkspace`.
+5. Пропишите `teamID` в `ios/ExportOptions.plist`.
+6. Соберите на macOS:
    ```bash
-   flutter build ipa --release
+   ./build-ipa.sh
+   # или: flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
    ```
-5. Загрузите через Transporter / Xcode Organizer.
+7. Загрузите через Transporter / Xcode Organizer / TestFlight.
+8. После публикации подставьте числовой App Store ID в `lib/core/constants.dart` (`appStoreId`).
 
 ## Переход с GitHub Updates на магазины
 

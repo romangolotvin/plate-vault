@@ -10,6 +10,16 @@
 	<string>Доступ к фото нужен, чтобы распознать номер со снимка.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Сохранение снимков номеров в вашей коллекции.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Датчик движения проверяет, что второй кадр снят с другого ракурса.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>https</string>
+		<string>http</string>
+		<string>itms-apps</string>
+	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

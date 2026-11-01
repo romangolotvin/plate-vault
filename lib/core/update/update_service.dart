@@ -152,13 +152,16 @@ class GithubReleaseUpdateService implements UpdateService {
 
   @override
   Future<void> openUpdate(UpdateCheckResult result) async {
-    // iOS: App Store stub (sideload not supported).
+    // iOS: App Store when listed; otherwise GitHub Releases (IPA / notes).
     if (!kIsWeb && Platform.isIOS) {
-      final store = Uri.parse(AppConstants.appStoreUrl);
-      if (await canLaunchUrl(store)) {
-        await launchUrl(store, mode: LaunchMode.externalApplication);
-        return;
+      final target = AppConstants.isAppStoreConfigured
+          ? AppConstants.appStoreUrl
+          : (result.releaseUrl ?? AppConstants.githubReleasesUrl);
+      final uri = Uri.parse(target);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
       }
+      return;
     }
 
     // Prefer in-app download on Android when APK asset exists.

@@ -1,14 +1,12 @@
-# Plate Vault 1.8.1
+# Plate Vault 1.8.2
 
-## Fix — белый экран профиля
-- Убран краш `DateFormat('ru')` без локали (из‑за него профиль был пустым/белым)
-- Убраны **Opacity→0** на вкладках и экранах (из‑за них «белый» пустой UI)
-- Анимации только slide + scale — контент всегда виден
-
-## Motion
-- Пружинящие кнопки (Vault CTA, карточки номеров)
-- Мягкий вход блоков на Витрине и Профиле
-- Переключение вкладок и переходы без fade-в-пустоту
+## iOS
+- Готовый путь сборки IPA на macOS: `./build-ipa.sh`
+- `ios/ExportOptions.plist` + чеклист в `docs/IOS.md`
+- GitHub Actions: `.github/workflows/ios.yml` (unsigned compile check)
+- Info.plist: motion usage, export compliance, URL schemes
+- Обновления на iOS: GitHub Releases, пока нет App Store ID
 
 ## Install
-Настройки → Проверить обновления, либо APK с GitHub Releases.
+- **Android:** Настройки → Проверить обновления, либо APK с GitHub Releases
+- **iOS:** TestFlight / IPA с Mac (`./build-ipa.sh`); до Store — страница релиза на GitHub
