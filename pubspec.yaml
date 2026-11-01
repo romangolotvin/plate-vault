@@ -1,7 +1,7 @@
 name: plate_vault
 description: Collect license plates from any country — scan, rate rarity, share.
 publish_to: "none"
-version: 1.8.1+13
+version: 1.8.2+14
 
 environment:
   sdk: ^3.13.7
@@ -30,6 +30,15 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/app_icon.png
+  adaptive_icon_background: "#0A0612"
+  adaptive_icon_foreground: assets/app_icon.png
+  remove_alpha_ios: true
 
 flutter:
   uses-material-design: true
