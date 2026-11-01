@@ -107,7 +107,7 @@ open ios/Runner.xcworkspace
 
 В том же TARGET **Runner** → вкладка **General**:
 
-- **Minimum Deployments** / iOS → **15.0** (как в проекте) или ниже твоего iPhone, если телефон старый — но не ниже того, что требует Flutter/плагины.
+- **Minimum Deployments** / iOS → **15.5** (нужно для google_mlkit; ниже нельзя).
 
 ### 6. Сборка и установка на телефон
 
