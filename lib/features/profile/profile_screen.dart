@@ -16,6 +16,8 @@ import '../../core/widgets/vault_cta.dart';
 import '../../core/widgets/vault_page.dart';
 import '../../data/models/collection_item.dart';
 import '../../data/models/user_profile.dart';
+import '../appeals/appeal_widgets.dart';
+import '../appeals/submit_appeal_screen.dart';
 import '../collection/edit_plate_screen.dart';
 import '../settings/settings_screen.dart';
 
@@ -123,29 +125,43 @@ class ProfileScreen extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: VaultStagger(
                   index: index,
-                  child: PlateCard(
-                    item: item,
-                    subtitle: formatDateRu(item.createdAt),
-                    onTap: isMe
-                        ? () {
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      PlateCard(
+                        item: item,
+                        subtitle: formatDateRu(item.createdAt),
+                        onTap: isMe
+                            ? () {
+                                Navigator.of(context).push(
+                                  vaultRoute(EditPlateScreen(existing: item)),
+                                );
+                              }
+                            : null,
+                        onShare: () => showSharePlateCard(
+                          context,
+                          item: item,
+                          currency: state.currency,
+                          seasonLabel: state.currentSeason.labelRu,
+                        ),
+                        onDelete: isMe
+                            ? () => _deleteWithConfirm(context, state, item)
+                            : null,
+                        onFavorite:
+                            isMe ? () => state.toggleFavorite(item) : null,
+                        onShowcase:
+                            isMe ? () => state.toggleShowcase(item) : null,
+                      ),
+                      if (isMe)
+                        AppealBar(
+                          statusLabel: state.appealStatusLabelFor(item.id),
+                          onPressed: () {
                             Navigator.of(context).push(
-                              vaultRoute(EditPlateScreen(existing: item)),
+                              vaultRoute(SubmitAppealScreen(item: item)),
                             );
-                          }
-                        : null,
-                    onShare: () => showSharePlateCard(
-                      context,
-                      item: item,
-                      currency: state.currency,
-                      seasonLabel: state.currentSeason.labelRu,
-                    ),
-                    onDelete: isMe
-                        ? () => _deleteWithConfirm(context, state, item)
-                        : null,
-                    onFavorite:
-                        isMe ? () => state.toggleFavorite(item) : null,
-                    onShowcase:
-                        isMe ? () => state.toggleShowcase(item) : null,
+                          },
+                        ),
+                    ],
                   ),
                 ),
               );
