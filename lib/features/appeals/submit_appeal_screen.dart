@@ -10,6 +10,7 @@ import '../../core/widgets/vault_cta.dart';
 import '../../core/widgets/vault_page.dart';
 import '../../data/appeals/plate_appeal.dart';
 import '../../data/models/collection_item.dart';
+import '../scan/country_switch.dart';
 import 'appeal_widgets.dart';
 
 /// Correct a scanned plate and send it, with photos, to the owner's desktop.
@@ -26,6 +27,7 @@ class _SubmitAppealScreenState extends State<SubmitAppealScreen> {
   late final TextEditingController _corrected;
   late final TextEditingController _url;
   late final TextEditingController _token;
+  late String _country;
   var _busy = false;
   var _loadedDesk = false;
 
@@ -33,6 +35,7 @@ class _SubmitAppealScreenState extends State<SubmitAppealScreen> {
   void initState() {
     super.initState();
     _corrected = TextEditingController(text: widget.item.rawText);
+    _country = widget.item.countryCode;
     _url = TextEditingController();
     _token = TextEditingController();
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadDesk());
@@ -61,6 +64,7 @@ class _SubmitAppealScreenState extends State<SubmitAppealScreen> {
     final error = await state.submitPlateAppeal(
       item: widget.item,
       correctedNumber: _corrected.text,
+      countryCode: _country,
     );
     if (!mounted) return;
     setState(() => _busy = false);
@@ -128,7 +132,7 @@ class _SubmitAppealScreenState extends State<SubmitAppealScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Владелец увидит этот номер, исправленный текст и фото номера.',
+                  'Владелец увидит этот номер, исправленный текст, страну и фото номера.',
                   style: Theme.of(context).textTheme.bodyMedium
                       ?.copyWith(color: VaultColors.mist, height: 1.35),
                 ),
@@ -136,6 +140,19 @@ class _SubmitAppealScreenState extends State<SubmitAppealScreen> {
             ),
           ),
           const SizedBox(height: 16),
+          CountrySwitch(
+            countryCode: _country,
+            onChanged: (value) => setState(() => _country = value),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Эту страну получит программа владельца вместе с номером и фото.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: VaultColors.mist,
+                  height: 1.35,
+                ),
+          ),
+          const SizedBox(height: 12),
           AppealCorrectedField(controller: _corrected),
           const SizedBox(height: 12),
           TextField(

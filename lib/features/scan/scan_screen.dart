@@ -14,6 +14,7 @@ import '../../data/anticheat/motion_gate.dart';
 import '../../data/models/trust_level.dart';
 import '../collection/edit_plate_screen.dart';
 import '../daily/daily_contract_card.dart';
+import 'country_switch.dart';
 
 enum _CaptureStep { idle, wide, close, processing }
 
@@ -31,6 +32,7 @@ class _ScanScreenState extends State<ScanScreen>
   String? _widePath;
   String? _closePath;
   String? _status;
+  String _expectedCountry = 'RU';
   late final AnimationController _enter;
 
   bool get _busy =>
@@ -270,8 +272,10 @@ class _ScanScreenState extends State<ScanScreen>
 
     try {
       final state = context.read<AppState>();
-      final ocr =
-          await state.ocrService.recognizeBestFromFiles([closePath, wide]);
+      final ocr = await state.ocrService.recognizeBestFromFiles(
+        [closePath, wide],
+        expectedCountry: _expectedCountry,
+      );
       if (!mounted) return;
 
       setState(() {
@@ -287,7 +291,7 @@ class _ScanScreenState extends State<ScanScreen>
             opacity: anim,
             child: EditPlateScreen(
               initialText: ocr?.text ?? '',
-              initialCountry: ocr?.suggestedCountry ?? 'RU',
+              initialCountry: ocr?.suggestedCountry ?? _expectedCountry,
               photoPath: wide,
               photoPathAlt: closePath,
               captureSource: CaptureSource.liveCamera,
@@ -374,7 +378,26 @@ class _ScanScreenState extends State<ScanScreen>
                                         height: 1.4,
                                       ),
                                 ),
-                                const SizedBox(height: 22),
+                                const SizedBox(height: 16),
+                                CountrySwitch(
+                                  countryCode: _expectedCountry,
+                                  onChanged: (value) {
+                                    if (_busy) return;
+                                    setState(() => _expectedCountry = value);
+                                  },
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Российский регион (77, 178, 777…) остаётся Россией, даже если его не разглядели сразу.',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: VaultColors.mist,
+                                        height: 1.35,
+                                      ),
+                                ),
+                                const SizedBox(height: 18),
                                 const Center(
                                   child: PlateBadge(
                                     text: 'МЕР777178',

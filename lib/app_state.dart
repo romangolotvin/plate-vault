@@ -164,6 +164,7 @@ class AppState extends ChangeNotifier {
   Future<String?> submitPlateAppeal({
     required CollectionItem item,
     required String correctedNumber,
+    String? countryCode,
   }) async {
     final corrected = correctedNumber.trim();
     if (corrected.isEmpty) {
@@ -178,10 +179,11 @@ class AppState extends ChangeNotifier {
     if (appealDesktopUrl.isEmpty) {
       return 'Укажите адрес программы владельца.';
     }
+    final country = (countryCode ?? item.countryCode).trim().toUpperCase();
     final appeal = PlateAppeal(
       id: _appealIds.v4(),
       plateItemId: item.id,
-      countryCode: item.countryCode,
+      countryCode: country.isEmpty ? item.countryCode : country,
       scannedNumber: item.rawText,
       correctedNumber: corrected,
       photoPaths: item.allPhotoPaths,
@@ -274,8 +276,18 @@ class AppState extends ChangeNotifier {
       }
     }
     if (item == null) return;
-    if (item.rawText.trim() == appeal.correctedNumber.trim()) return;
-    await updatePlate(item.copyWith(rawText: appeal.correctedNumber));
+    final nextText = appeal.correctedNumber.trim();
+    final nextCountry = appeal.countryCode.trim().toUpperCase();
+    if (nextText.isEmpty) return;
+    final sameNumber = item.rawText.trim() == nextText;
+    final sameCountry = item.countryCode.toUpperCase() == nextCountry;
+    if (sameNumber && sameCountry) return;
+    await updatePlate(
+      item.copyWith(
+        rawText: nextText,
+        countryCode: nextCountry.isEmpty ? item.countryCode : nextCountry,
+      ),
+    );
   }
 
   List<PlateSetProgress> get setProgress =>
