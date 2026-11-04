@@ -4,6 +4,7 @@ import 'plate_country_spec.dart';
 import 'plate_fields.dart';
 import 'plate_format.dart';
 import 'plate_visual_spec.dart';
+import 'ru_plate.dart';
 
 /// Central catalog of country plate specs. Extensible via [register].
 class PlateRegistry {
@@ -59,10 +60,25 @@ class PlateRegistry {
   }
 
   /// Best matching country among [preferred] then all catalog entries.
+  ///
+  /// [hintCountry] is the country the user picked before the scan. It wins
+  /// only when no real format matches. A Russian civilian plate whose region
+  /// code is a real Russian region is Russia either way — it must not fall
+  /// through to the generic US pattern.
   ({String code, int score, ParsedPlateFields fields}) detectCountry(
     String normalized, {
+    String? hintCountry,
     List<String> preferred = const ['RU', 'BY', 'KZ', 'UA', 'DE', 'PL', 'FR', 'IT', 'ES', 'GB', 'US', 'TR'],
   }) {
+    final read = RuPlate.read(normalized);
+    if (read != null && RuPlate.preferRussia(read, hintCountry)) {
+      return (
+        code: 'RU',
+        score: read.knownRegion ? 80 : 36,
+        fields: _ruFields(read),
+      );
+    }
+
     var bestCode = preferred.isNotEmpty ? preferred.first : 'GEN';
     var bestScore = -1;
     ParsedPlateFields bestFields = ParsedPlateFields(
@@ -77,7 +93,10 @@ class PlateRegistry {
 
     for (final code in ordered) {
       final spec = resolve(code);
-      final bonus = spec.ocrScoreBonus(normalized);
+      var bonus = spec.ocrScoreBonus(normalized);
+      // The US catalog entry is "any 2–8 letters or digits". That also
+      // matches a Russian body whose region was not read. Don't let it win.
+      if (spec.code == 'US' && read != null) bonus = 0;
       if (bonus > bestScore) {
         bestScore = bonus;
         bestCode = spec.code;
@@ -85,7 +104,36 @@ class PlateRegistry {
       }
     }
     if (bestScore < 0) bestScore = 0;
+
+    final hinted = _hintCode(hintCountry);
+    if (hinted != null && bestScore <= 12 && hinted != bestCode) {
+      final spec = resolve(hinted);
+      return (
+        code: hinted,
+        score: 16,
+        fields: spec.parse(normalized),
+      );
+    }
     return (code: bestCode, score: bestScore, fields: bestFields);
+  }
+
+  String? _hintCode(String? hintCountry) {
+    final raw = hintCountry?.trim().toUpperCase() ?? '';
+    if (raw.isEmpty) return null;
+    if (raw == 'XX' || raw == 'EU') return 'XX';
+    return resolve(raw).code;
+  }
+
+  ParsedPlateFields _ruFields(RuPlateRead read) {
+    final parsed = resolve('RU').parse(read.display);
+    if (parsed.matched) return parsed;
+    return ParsedPlateFields(
+      slots: {
+        'main': read.display,
+        if (read.region != null) 'region': read.region!,
+      },
+      displayText: read.display,
+    );
   }
 
   ParsedPlateFields parse(String countryCode, String normalized) =>

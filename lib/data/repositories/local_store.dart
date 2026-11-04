@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../appeals/plate_appeal.dart';
 import '../models/collection_item.dart';
 import '../models/user_profile.dart';
 import '../valuation/currency.dart';
@@ -24,6 +25,9 @@ class LocalStore {
   static const _clansDirKey = 'known_clans_v1';
   static const _cooldownsKey = 'plate_cooldowns_v1';
   static const _reportsKey = 'plate_reports_v1';
+  static const _appealsKey = 'plate_appeals_v1';
+  static const _appealDesktopUrlKey = 'appeal_desktop_url_v1';
+  static const _appealDesktopTokenKey = 'appeal_desktop_token_v1';
 
   Future<List<CollectionItem>> loadItems() async {
     final prefs = await SharedPreferences.getInstance();
@@ -94,9 +98,7 @@ class LocalStore {
     final raw = prefs.getString(_sightingsKey);
     if (raw == null || raw.isEmpty) return {};
     final map = jsonDecode(raw) as Map<String, dynamic>;
-    return {
-      for (final e in map.entries) e.key: (e.value as num).toInt(),
-    };
+    return {for (final e in map.entries) e.key: (e.value as num).toInt()};
   }
 
   Future<int> getSightingCount(String plateId) async {
@@ -217,5 +219,43 @@ class LocalStore {
   Future<void> saveReports(Map<String, int> map) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_reportsKey, jsonEncode(map));
+  }
+
+  Future<List<PlateAppeal>> loadAppeals() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_appealsKey);
+    if (raw == null || raw.isEmpty) return [];
+    final list = jsonDecode(raw) as List<dynamic>;
+    return list
+        .map((e) => PlateAppeal.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
+
+  Future<void> saveAppeals(List<PlateAppeal> appeals) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _appealsKey,
+      jsonEncode(appeals.map((e) => e.toJson()).toList()),
+    );
+  }
+
+  Future<String> loadAppealDesktopUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_appealDesktopUrlKey) ?? '';
+  }
+
+  Future<void> saveAppealDesktopUrl(String url) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_appealDesktopUrlKey, url);
+  }
+
+  Future<String> loadAppealDesktopToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_appealDesktopTokenKey) ?? '';
+  }
+
+  Future<void> saveAppealDesktopToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_appealDesktopTokenKey, token);
   }
 }

@@ -12,8 +12,8 @@ import '../../core/widgets/vault_scaffold.dart';
 import '../../data/models/collection_item.dart';
 import '../../data/models/rarity.dart';
 import '../../data/models/trust_level.dart';
-import '../../data/plates/plate_registry.dart';
 import '../../data/rarity/rarity_engine.dart';
+import '../scan/country_switch.dart';
 import '../../data/sightings/sighting_service.dart';
 import '../../data/valuation/plate_valuation_engine.dart';
 
@@ -42,15 +42,6 @@ class EditPlateScreen extends StatefulWidget {
 }
 
 class _EditPlateScreenState extends State<EditPlateScreen> {
-  static final _countries = <String>{
-    ...PlateRegistry.instance.codes.where((c) => c != 'GEN'),
-    'NL',
-    'CN',
-    'JP',
-    'XX',
-  }.toList()
-    ..sort();
-
   late final TextEditingController _textCtrl;
   late final TextEditingController _notesCtrl;
   late String _country;
@@ -340,15 +331,10 @@ class _EditPlateScreenState extends State<EditPlateScreen> {
             },
           ),
           const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            // ignore: deprecated_member_use
-            value: _countries.contains(_country) ? _country : 'XX',
-            decoration: const InputDecoration(labelText: 'Страна'),
-            items: _countries
-                .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                .toList(),
-            onChanged: (v) {
-              setState(() => _country = v ?? 'XX');
+          CountrySwitch(
+            countryCode: _country,
+            onChanged: (value) {
+              setState(() => _country = value);
               _refreshSightings();
             },
           ),

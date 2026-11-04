@@ -3,8 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 
 import 'core/update/update_service.dart';
+import 'data/appeals/appeal_client.dart';
+import 'data/appeals/plate_appeal.dart';
 import 'data/achievements/achievements.dart';
 import 'data/clans/clan_models.dart';
 import 'data/daily/daily_contract.dart';
@@ -33,7 +36,7 @@ enum TrustFilter { all, street, unverified }
 
 class AppState extends ChangeNotifier {
   AppState({UpdateService? updateService})
-      : updateService = updateService ?? GithubReleaseUpdateService();
+    : updateService = updateService ?? GithubReleaseUpdateService();
 
   final UpdateService updateService;
   final LocalStore localStore = LocalStore();
@@ -71,6 +74,13 @@ class AppState extends ChangeNotifier {
   /// Normalized plateId -> local complaint count.
   Map<String, int> plateReports = {};
 
+  /// Appeals waiting on the owner's desktop program.
+  List<PlateAppeal> appeals = [];
+  String appealDesktopUrl = '';
+  String appealDesktopToken = '';
+  final AppealClient appealClient = AppealClient();
+  final Uuid _appealIds = const Uuid();
+
   DailyContractState? dailyState;
   HuntStreak huntStreak = const HuntStreak(current: 0, best: 0);
   WeeklyDuel? weeklyDuel;
@@ -83,10 +93,10 @@ class AppState extends ChangeNotifier {
   HuntStreak get streakUi => huntStreak.resolved();
 
   double get seasonWorthRub => leaderboardService.portfolioWorth(
-        collectionRepository.items,
-        kind: LeaderboardKind.street,
-        seasonId: currentSeason.id,
-      );
+    collectionRepository.items,
+    kind: LeaderboardKind.street,
+    seasonId: currentSeason.id,
+  );
 
   static const plateCooldown = Duration(hours: 12);
 
@@ -123,6 +133,161 @@ class AppState extends ChangeNotifier {
     plateReports[id] = (plateReports[id] ?? 0) + 1;
     await localStore.saveReports(plateReports);
     notifyListeners();
+  }
+
+  String? appealStatusLabelFor(String plateItemId) {
+    final latest = latestAppeal(appeals, plateItemId);
+    if (latest == null) return null;
+    return appealDeliveryLabel(latest.delivery);
+  }
+
+  Future<void> _loadAppeals() async {
+    appeals = await localStore.loadAppeals();
+    appealDesktopUrl = await localStore.loadAppealDesktopUrl();
+    appealDesktopToken = await localStore.loadAppealDesktopToken();
+    await refreshAppealDecisions();
+  }
+
+  Future<void> setAppealDesktop({
+    required String url,
+    required String token,
+  }) async {
+    appealDesktopUrl = url.trim();
+    appealDesktopToken = token.trim();
+    await localStore.saveAppealDesktopUrl(appealDesktopUrl);
+    await localStore.saveAppealDesktopToken(appealDesktopToken);
+    notifyListeners();
+  }
+
+  /// Sends the scanned number, the corrected number, and the plate photos.
+  /// Returns a Russian error, or null when the desktop program accepted it.
+  Future<String?> submitPlateAppeal({
+    required CollectionItem item,
+    required String correctedNumber,
+    String? countryCode,
+  }) async {
+    final corrected = correctedNumber.trim();
+    if (corrected.isEmpty) {
+      return 'Введите номер в поле «Скорректировать номер».';
+    }
+    final blocked = appealBlockReason(appeals, item.id);
+    if (blocked != null) return blocked;
+    final me = profile;
+    if (me == null || item.userId != me.uid) {
+      return 'Обжаловать можно только свой номер.';
+    }
+    if (appealDesktopUrl.isEmpty) {
+      return 'Укажите адрес программы владельца.';
+    }
+    final country = (countryCode ?? item.countryCode).trim().toUpperCase();
+    final appeal = PlateAppeal(
+      id: _appealIds.v4(),
+      plateItemId: item.id,
+      countryCode: country.isEmpty ? item.countryCode : country,
+      scannedNumber: item.rawText,
+      correctedNumber: corrected,
+      photoPaths: item.allPhotoPaths,
+      createdAt: DateTime.now(),
+      delivery: AppealDelivery.queued,
+    );
+    appeals = upsertAppeal(appeals, appeal);
+    await localStore.saveAppeals(appeals);
+    notifyListeners();
+    return _deliverAppeal(appeal);
+  }
+
+  Future<String?> retryAppeal(String id) async {
+    PlateAppeal? appeal;
+    for (final candidate in appeals) {
+      if (candidate.id == id) appeal = candidate;
+    }
+    if (appeal == null) return 'Заявление не найдено.';
+    if (appeal.delivery != AppealDelivery.queued) return null;
+    if (appealDesktopUrl.isEmpty) {
+      return 'Укажите адрес программы владельца.';
+    }
+    return _deliverAppeal(appeal);
+  }
+
+  Future<void> refreshAppealDecisions() async {
+    if (appealDesktopUrl.isEmpty) return;
+    final snapshot = List<PlateAppeal>.from(appeals);
+    for (final appeal in snapshot) {
+      if (appeal.delivery == AppealDelivery.queued) {
+        await _deliverAppeal(appeal);
+        continue;
+      }
+      if (appeal.delivery != AppealDelivery.sent) continue;
+      try {
+        final remote = await appealClient.fetchStatus(
+          baseUrl: appealDesktopUrl,
+          token: appealDesktopToken,
+          id: appeal.id,
+        );
+        if (remote == null) continue;
+        final delivery = deliveryFromServer(remote.status);
+        if (delivery == appeal.delivery) continue;
+        final next = appeal.copyWith(delivery: delivery, clearError: true);
+        appeals = upsertAppeal(appeals, next);
+        await localStore.saveAppeals(appeals);
+        if (delivery == AppealDelivery.approved) {
+          await _applyApprovedCorrection(next);
+        }
+        notifyListeners();
+      } on AppealTransportException {
+        // The owner's computer is off. Keep the copy on the phone.
+      }
+    }
+  }
+
+  Future<String?> _deliverAppeal(PlateAppeal appeal) async {
+    try {
+      final photos = await appealClient.readPhotos(appeal.photoPaths);
+      final result = await appealClient.submit(
+        baseUrl: appealDesktopUrl,
+        token: appealDesktopToken,
+        appeal: appeal,
+        photos: photos,
+      );
+      final delivery = deliveryFromServer(result.status);
+      final next = appeal.copyWith(delivery: delivery, clearError: true);
+      appeals = upsertAppeal(appeals, next);
+      await localStore.saveAppeals(appeals);
+      if (delivery == AppealDelivery.approved) {
+        await _applyApprovedCorrection(next);
+      }
+      notifyListeners();
+      return null;
+    } on AppealTransportException catch (e) {
+      final next = appeal.copyWith(error: e.messageRu);
+      appeals = upsertAppeal(appeals, next);
+      await localStore.saveAppeals(appeals);
+      notifyListeners();
+      return e.messageRu;
+    }
+  }
+
+  Future<void> _applyApprovedCorrection(PlateAppeal appeal) async {
+    CollectionItem? item;
+    for (final candidate in collectionRepository.items) {
+      if (candidate.id == appeal.plateItemId) {
+        item = candidate;
+        break;
+      }
+    }
+    if (item == null) return;
+    final nextText = appeal.correctedNumber.trim();
+    final nextCountry = appeal.countryCode.trim().toUpperCase();
+    if (nextText.isEmpty) return;
+    final sameNumber = item.rawText.trim() == nextText;
+    final sameCountry = item.countryCode.toUpperCase() == nextCountry;
+    if (sameNumber && sameCountry) return;
+    await updatePlate(
+      item.copyWith(
+        rawText: nextText,
+        countryCode: nextCountry.isEmpty ? item.countryCode : nextCountry,
+      ),
+    );
   }
 
   List<PlateSetProgress> get setProgress =>
@@ -184,9 +349,9 @@ class AppState extends ChangeNotifier {
   }
 
   double get collectionWorthRub => leaderboardService.portfolioWorth(
-        collectionRepository.items,
-        kind: LeaderboardKind.unverified,
-      );
+    collectionRepository.items,
+    kind: LeaderboardKind.unverified,
+  );
 
   double get streetWorthRub =>
       leaderboardService.portfolioWorth(
@@ -196,9 +361,9 @@ class AppState extends ChangeNotifier {
       dailyBonusRub;
 
   int get streetCount => leaderboardService.plateCount(
-        collectionRepository.items,
-        kind: LeaderboardKind.street,
-      );
+    collectionRepository.items,
+    kind: LeaderboardKind.street,
+  );
 
   List<Achievement> get achievements =>
       achievementsEngine.evaluate(collectionRepository.items);
@@ -233,6 +398,7 @@ class AppState extends ChangeNotifier {
       await _loadSocialState();
       plateCooldowns = await localStore.loadCooldowns();
       plateReports = await localStore.loadReports();
+      await _loadAppeals();
       currentSeason = Season.current();
       await refreshPublic();
       await refreshLeaderboards();
@@ -251,6 +417,7 @@ class AppState extends ChangeNotifier {
       await _loadSocialState();
       plateCooldowns = await localStore.loadCooldowns();
       plateReports = await localStore.loadReports();
+      await _loadAppeals();
       currentSeason = Season.current();
       cloudEnabled = false;
       await refreshLeaderboards();
@@ -276,7 +443,8 @@ class AppState extends ChangeNotifier {
 
   /// Called after a Street plate is saved. Returns true if today's contract completed.
   Future<bool> tryCompleteDailyContract(CollectionItem item) async {
-    final current = dailyState ??
+    final current =
+        dailyState ??
         DailyContractState(
           contract: DailyContract.forDay(),
           completedDayKey: null,
@@ -364,11 +532,7 @@ class AppState extends ChangeNotifier {
     if (profile.publicCollectionEnabled) {
       for (final item in collectionRepository.items) {
         if (!item.isPublic) {
-          await collectionRepository.setItemPublic(
-            item.id,
-            true,
-            profile.uid,
-          );
+          await collectionRepository.setItemPublic(item.id, true, profile.uid);
         }
       }
     }
@@ -381,10 +545,7 @@ class AppState extends ChangeNotifier {
     required String countryCode,
     required String rawText,
   }) {
-    return sightingService.getCount(
-      countryCode: countryCode,
-      rawText: rawText,
-    );
+    return sightingService.getCount(countryCode: countryCode, rawText: rawText);
   }
 
   Future<CollectionItem> addPlate({
@@ -442,7 +603,8 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _loadSocialState() async {
-    huntStreak = HuntStreak.fromJson(await localStore.loadStreakJson()).resolved();
+    huntStreak = HuntStreak.fromJson(await localStore.loadStreakJson())
+        .resolved();
     final duelJson = await localStore.loadDuelJson();
     if (duelJson != null) {
       weeklyDuel = WeeklyDuel.fromJson(duelJson);
@@ -634,9 +796,7 @@ class AppState extends ChangeNotifier {
       if (me != null) ...mine.where((e) => e.isPublic || true),
     ];
     // Dedupe by id
-    final byId = <String, CollectionItem>{
-      for (final i in visible) i.id: i,
-    };
+    final byId = <String, CollectionItem>{for (final i in visible) i.id: i};
     currentSeason = Season.current();
     streetBoard = await leaderboardService.build(
       kind: LeaderboardKind.street,
@@ -655,25 +815,26 @@ class AppState extends ChangeNotifier {
     );
     // Inject daily-contract flex bonus into local "me" row.
     if (me != null && dailyBonusRub > 0) {
-      streetBoard = [
-        for (final e in streetBoard)
-          if (e.isMe)
-            LeaderboardEntry(
-              rank: e.rank,
-              userId: e.userId,
-              displayName: e.displayName,
-              portfolioRub: e.portfolioRub + dailyBonusRub,
-              plateCount: e.plateCount,
-              kind: e.kind,
-              isMe: true,
-            )
-          else
-            e,
-      ]..sort((a, b) {
-          final c = b.portfolioRub.compareTo(a.portfolioRub);
-          if (c != 0) return c;
-          return b.plateCount.compareTo(a.plateCount);
-        });
+      streetBoard =
+          [
+            for (final e in streetBoard)
+              if (e.isMe)
+                LeaderboardEntry(
+                  rank: e.rank,
+                  userId: e.userId,
+                  displayName: e.displayName,
+                  portfolioRub: e.portfolioRub + dailyBonusRub,
+                  plateCount: e.plateCount,
+                  kind: e.kind,
+                  isMe: true,
+                )
+              else
+                e,
+          ]..sort((a, b) {
+            final c = b.portfolioRub.compareTo(a.portfolioRub);
+            if (c != 0) return c;
+            return b.plateCount.compareTo(a.plateCount);
+          });
       streetBoard = [
         for (var i = 0; i < streetBoard.length; i++)
           LeaderboardEntry(
