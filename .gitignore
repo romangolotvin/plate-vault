@@ -45,5 +45,12 @@ coverage/
 google-services.json
 GoogleService-Info.plist
 
+# Oculus (Python desktop)
+oculus/dist/
+oculus/build/
+oculus/*.spec
+oculus/**/__pycache__/
+oculus/.pytest_cache/
+
 # Requires gh token workflow scope to push
 .github/workflows/
